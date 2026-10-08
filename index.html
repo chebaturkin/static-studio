@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#F3EBDD">
+    <meta name="description" content="Static Studio — типографская мастерская для небольших статичных страниц.">
+    <title>Static Studio</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="studio-shell">
+      <header class="topbar" aria-label="Панель проекта">
+        <a class="brand" href="#main" aria-label="Static Studio — к началу">
+          <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+            <path d="M4 4h24v24H4zM4 12h24M12 4v24M20 12v16" />
+          </svg>
+          <span class="brand-name">Static Studio</span>
+        </a>
+        <div class="project-name" aria-label="Текущий проект">Без названия <span class="save-state">· локально</span></div>
+        <nav class="topbar-actions" aria-label="Действия с проектом">
+          <button class="button button-quiet" id="import-project" type="button">Импорт проекта</button>
+          <button class="button button-accent" id="export-project" type="button">Экспорт ZIP</button>
+          <input class="visually-hidden" id="project-file" type="file" accept="application/json,.json" tabindex="-1">
+        </nav>
+      </header>
+
+      <main class="workspace" id="main">
+        <aside class="editor-rail" aria-label="Редактор страницы">
+          <section class="rail-section composition-section" aria-labelledby="composition-title">
+            <div class="section-heading">
+              <span class="section-index">01</span>
+              <h2 id="composition-title">Композиция</h2>
+            </div>
+            <label class="field-label" for="composition-select">Основа страницы</label>
+            <select class="select-control" id="composition-select" name="composition">
+              <option value="note">Заметка</option>
+              <option value="portfolio">Портфолио</option>
+              <option value="poster">Афиша</option>
+              <option value="guide">Мини-справочник</option>
+            </select>
+          </section>
+
+          <section class="rail-section blocks-section" aria-labelledby="blocks-title">
+            <div class="section-heading section-heading-spread">
+              <div class="heading-label">
+                <span class="section-index">02</span>
+                <h2 id="blocks-title">Блоки страницы</h2>
+              </div>
+              <button class="icon-button add-block" id="add-block" type="button" aria-label="Добавить блок">+</button>
+            </div>
+            <ol class="block-list" id="block-list" aria-label="Порядок блоков">
+              <li class="block-item is-selected" data-block-id="heading">
+                <button class="block-select" type="button" aria-current="true">
+                  <span class="block-grip" aria-hidden="true">⠿</span><span class="block-number">01</span><span class="block-name">Заголовок</span>
+                </button>
+                <button class="block-remove" type="button" aria-label="Удалить блок «Заголовок»">×</button>
+              </li>
+              <li class="block-item" data-block-id="text">
+                <button class="block-select" type="button">
+                  <span class="block-grip" aria-hidden="true">⠿</span><span class="block-number">02</span><span class="block-name">Текст</span>
+                </button>
+                <button class="block-remove" type="button" aria-label="Удалить блок «Текст»">×</button>
+              </li>
+              <li class="block-item" data-block-id="image">
+                <button class="block-select" type="button">
+                  <span class="block-grip" aria-hidden="true">⠿</span><span class="block-number">03</span><span class="block-name">Изображение</span>
+                </button>
+                <button class="block-remove" type="button" aria-label="Удалить блок «Изображение»">×</button>
+              </li>
+            </ol>
+            <div class="block-editor" id="block-editor" aria-label="Настройки выбранного блока">
+              <label class="field-label" for="block-content">Содержание</label>
+              <textarea class="text-control" id="block-content" rows="3" placeholder="Введите текст блока"></textarea>
+            </div>
+          </section>
+
+          <section class="rail-section settings-section" aria-labelledby="settings-title">
+            <div class="section-heading">
+              <span class="section-index">03</span>
+              <h2 id="settings-title">Вид страницы</h2>
+            </div>
+            <div class="settings-mount" id="settings-mount">
+              <label class="field-label" for="page-width">Ширина, px</label>
+              <input class="text-control compact-control" id="page-width" type="number" min="480" max="1440" value="960">
+              <label class="field-label" for="page-color">Цвет фона</label>
+              <div class="color-field"><input id="page-color" type="color" value="#F3EBDD"><span>#F3EBDD</span></div>
+              <label class="field-label" for="page-font">Шрифт текста</label>
+              <select class="select-control" id="page-font"><option>Системный</option><option>С засечками</option><option>Моноширинный</option></select>
+            </div>
+          </section>
+          <footer class="rail-footer">Файлы остаются на вашем устройстве.</footer>
+        </aside>
+
+        <section class="preview-area" aria-labelledby="preview-title">
+          <div class="preview-toolbar">
+            <div>
+              <span class="preview-kicker">ПОЛОТНО · 01</span>
+              <h1 id="preview-title">Предпросмотр</h1>
+            </div>
+            <div class="preview-controls" role="group" aria-label="Размер предпросмотра">
+              <button class="view-button is-active" type="button" aria-pressed="true" aria-label="Просмотр на компьютере">⌗</button>
+              <button class="view-button" type="button" aria-pressed="false" aria-label="Просмотр на телефоне">▯</button>
+            </div>
+          </div>
+          <div class="preview-frame" id="preview-mount" aria-label="Предпросмотр страницы">
+            <article class="page-preview">
+              <p class="page-overline">ЗАМЕТКА · 08 ОКТЯБРЯ 2026</p>
+              <h2>Место для вашей<br>следующей истории</h2>
+              <p class="page-deck">Соберите страницу из небольших элементов. Здесь можно менять текст, добавлять изображения и находить свой ритм.</p>
+              <div class="preview-rule"></div>
+              <p class="page-copy">Хорошая страница начинается с ясной мысли. Дайте ей достаточно воздуха, выберите один акцент и оставьте только то, что помогает рассказать историю.</p>
+              <div class="preview-image-placeholder" role="img" aria-label="Место для изображения">
+                <span class="placeholder-cross" aria-hidden="true">✳</span>
+                <span>Изображение появится здесь</span>
+              </div>
+              <p class="page-caption">01 — Подпись к изображению</p>
+            </article>
+          </div>
+          <p class="preview-note">Предпросмотр обновляется по мере редактирования.</p>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
