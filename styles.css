@@ -6,7 +6,7 @@
   --accent: #C95B43;
   --preview: #E8DFD0;
   --line-soft: rgba(207, 196, 179, .25);
-  --serif: "PT Serif", Georgia, serif;
+  --serif: "PT Serif", "Iowan Old Style", "Palatino Linotype", serif;
   --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
 }
 
