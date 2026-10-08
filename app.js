@@ -337,7 +337,7 @@ function normalizeImportedProject(input) {
 
 export function importProjectData(input) {
   const next = normalizeImportedProject(input);
-  Object.assign(state, next, { selectedBlockId: next.blocks[0]?.id || null });
+  Object.assign(state, next, { selectedBlockId: next.selectedBlockId || next.blocks[0]?.id || null });
   renderAll();
   setProjectStatus('Проект импортирован.');
   return true;
