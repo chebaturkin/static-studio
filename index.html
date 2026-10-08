@@ -111,8 +111,8 @@
               <h1 id="preview-title">Предпросмотр</h1>
             </div>
             <div class="preview-controls" role="group" aria-label="Размер предпросмотра">
-              <button class="view-button is-active" type="button" aria-pressed="true" aria-label="Просмотр на компьютере">⌗</button>
-              <button class="view-button" type="button" aria-pressed="false" aria-label="Просмотр на телефоне">▯</button>
+              <button class="view-button is-active" type="button" data-preview-mode="desktop" aria-pressed="true" aria-label="Просмотр на компьютере">⌗</button>
+              <button class="view-button" type="button" data-preview-mode="mobile" aria-pressed="false" aria-label="Просмотр на телефоне">▯</button>
             </div>
           </div>
           <p class="visually-hidden" id="preview-status" aria-live="polite">Предпросмотр готов.</p>
@@ -122,6 +122,6 @@
         </section>
       </main>
     </div>
-    <script type="module" src="app.js"></script>
+    <script src="app.js" defer></script>
   </body>
 </html>

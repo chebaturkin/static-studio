@@ -96,7 +96,7 @@ const EXPORT_FONT_STACKS = Object.freeze({
 
 let idCounter = 0;
 
-export function createId(prefix = 'block') {
+function createId(prefix = 'block') {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return `${prefix}-${crypto.randomUUID()}`;
   }
@@ -113,27 +113,27 @@ function withId(type, defaults, overrides = {}) {
   };
 }
 
-export function createHeading(overrides = {}) {
+function createHeading(overrides = {}) {
   return withId('heading', { content: 'Новая мысль', level: 1 }, overrides);
 }
 
-export function createText(overrides = {}) {
+function createText(overrides = {}) {
   return withId('text', { content: 'Напишите здесь несколько строк текста.' }, overrides);
 }
 
-export function createImage(overrides = {}) {
+function createImage(overrides = {}) {
   return withId('image', { src: '', alt: '', name: '', caption: '' }, overrides);
 }
 
-export function createLink(overrides = {}) {
+function createLink(overrides = {}) {
   return withId('link', { label: 'Открыть ссылку', url: 'https://example.com' }, overrides);
 }
 
-export function createDivider(overrides = {}) {
+function createDivider(overrides = {}) {
   return withId('divider', { style: 'line' }, overrides);
 }
 
-export const blockFactories = Object.freeze({ heading: createHeading, text: createText, image: createImage, link: createLink, divider: createDivider });
+const blockFactories = Object.freeze({ heading: createHeading, text: createText, image: createImage, link: createLink, divider: createDivider });
 
 const templateFactories = Object.freeze({
   note: () => [
@@ -166,7 +166,7 @@ const templateFactories = Object.freeze({
   ],
 });
 
-export const templates = Object.freeze(Object.keys(TEMPLATE_LABELS).reduce((result, key) => {
+const templates = Object.freeze(Object.keys(TEMPLATE_LABELS).reduce((result, key) => {
   result[key] = Object.freeze({
     id: key,
     label: TEMPLATE_LABELS[key],
@@ -175,7 +175,7 @@ export const templates = Object.freeze(Object.keys(TEMPLATE_LABELS).reduce((resu
   return result;
 }, {}));
 
-export function createDefaultProject(template = 'note') {
+function createDefaultProject(template = 'note') {
   const templateId = templates[template] ? template : 'note';
   return {
     id: createId('project'),
@@ -187,7 +187,7 @@ export function createDefaultProject(template = 'note') {
 }
 
 // The complete in-memory state is intentionally small and serializable.
-export const state = {
+const state = {
   ...createDefaultProject('note'),
   selectedBlockId: null,
 };
@@ -280,7 +280,7 @@ function textHtml(value, emptyLabel) {
   return escapeHtml(text).replace(/\r?\n/g, '<br>');
 }
 
-export function renderPreview(project = state, { mount = true } = {}) {
+function renderPreview(project = state, { mount = true } = {}) {
   const blocks = Array.isArray(project?.blocks) ? project.blocks : [];
   const template = TEMPLATE_LABELS[project?.template] || TEMPLATE_LABELS.note;
   const content = blocks.map((block) => {
@@ -343,7 +343,7 @@ function projectPayload() {
   };
 }
 
-export function exportProject() {
+function exportProject() {
   if (typeof Blob === 'undefined' || typeof URL === 'undefined') return false;
   const blob = new Blob([JSON.stringify(projectPayload(), null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -374,7 +374,7 @@ const CRC32_TABLE = (() => {
   return table;
 })();
 
-export function crc32(input) {
+function crc32(input) {
   const bytes = asBytes(input);
   let crc = 0xFFFFFFFF;
   for (const byte of bytes) crc = CRC32_TABLE[(crc ^ byte) & 0xFF] ^ (crc >>> 8);
@@ -393,7 +393,7 @@ function zipEntries(files) {
   throw new TypeError('ZIP files must be an object, Map, or array.');
 }
 
-export function buildZip(files) {
+function buildZip(files) {
   const entries = zipEntries(files).map(({ name, data }) => {
     const normalizedName = String(name ?? '');
     const segments = normalizedName.split('/');
@@ -506,7 +506,7 @@ function exportStyles(settings = {}) {
     .replace('--body-font: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;', `--body-font: ${bodyFont};`);
 }
 
-export function buildExportFiles(project = state) {
+function buildExportFiles(project = state) {
   const source = project && typeof project === 'object' ? project : state;
   const usedNames = new Set();
   const assets = [];
@@ -543,7 +543,7 @@ export function buildExportFiles(project = state) {
   };
 }
 
-export function exportZip(project = state) {
+function exportZip(project = state) {
   try {
     const blob = buildZip(buildExportFiles(project));
     if (typeof document === 'undefined' || typeof URL === 'undefined') return blob;
@@ -597,7 +597,7 @@ function normalizeImportedProject(input) {
   return { id: typeof input.id === 'string' && input.id.length <= 120 ? input.id : createId('project'), title: typeof input.title === 'string' ? input.title.slice(0, MAX_TEXT_LENGTH) : 'Без названия', template, settings, blocks, selectedBlockId };
 }
 
-export function importProjectData(input) {
+function importProjectData(input) {
   const next = normalizeImportedProject(input);
   Object.assign(state, next, { selectedBlockId: next.selectedBlockId || next.blocks[0]?.id || null });
   renderAll();
@@ -741,7 +741,7 @@ function renderBlockEditor() {
   dom.editor.innerHTML = html;
 }
 
-export function renderAll(options = {}) {
+function renderAll(options = {}) {
   const focus = options.focus || rememberFocus();
   if (!state.selectedBlockId || !getBlock(state.selectedBlockId)) state.selectedBlockId = state.blocks[0]?.id || null;
   renderComposition();
@@ -752,7 +752,7 @@ export function renderAll(options = {}) {
   restoreFocus(focus);
 }
 
-export function moveBlock(id, direction) {
+function moveBlock(id, direction) {
   const index = state.blocks.findIndex((block) => block.id === id);
   if (index < 0) return false;
   const targetIndex = direction === 'up' ? index - 1 : index + 1;
@@ -856,6 +856,17 @@ function handleSettingChange(event) {
     return;
   }
   updateSetting(target.dataset.setting, target.value);
+}
+
+function setPreviewViewport(mode) {
+  const isMobile = mode === 'mobile';
+  const frame = document.querySelector('#preview-mount');
+  frame?.classList.toggle('is-mobile', isMobile);
+  document.querySelectorAll('[data-preview-mode]').forEach((button) => {
+    const active = button.dataset.previewMode === mode;
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
 }
 
 function setPreviewMode(showPreview) {
@@ -970,6 +981,7 @@ function bindDom() {
   dom.exportButton = document.querySelector('#export-project');
   dom.zipExportButton = document.querySelector('#export-zip');
   dom.importButton = document.querySelector('#import-project');
+  document.querySelectorAll('[data-preview-mode]').forEach((button) => button.addEventListener('click', () => setPreviewViewport(button.dataset.previewMode)));
 
   if (dom.addButton && !dom.addType) {
     dom.addType = document.createElement('select');
@@ -999,7 +1011,7 @@ function bindDom() {
   document.addEventListener('click', handleGlobalClick);
 }
 
-export function init() {
+function init() {
   if (typeof document === 'undefined' || initialized) return;
   initialized = true;
   bindDom();
@@ -1011,4 +1023,31 @@ if (typeof document !== 'undefined') {
   init();
 }
 
-export { DEFAULT_SETTINGS, BLOCK_LABELS, TEMPLATE_LABELS };
+if (typeof window !== 'undefined') {
+  window.StaticStudio = Object.freeze({
+    DEFAULT_SETTINGS,
+    BLOCK_LABELS,
+    TEMPLATE_LABELS,
+    createId,
+    createHeading,
+    createText,
+    createImage,
+    createLink,
+    createDivider,
+    blockFactories,
+    templates,
+    createDefaultProject,
+    state,
+    renderPreview,
+    exportProject,
+    crc32,
+    buildZip,
+    buildExportFiles,
+    exportZip,
+    importProjectData,
+    renderAll,
+    moveBlock,
+    setPreviewViewport,
+    init,
+  });
+}

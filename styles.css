@@ -78,6 +78,7 @@ h2 { font-family: var(--serif); font-size: 21px; font-weight: 400; line-height: 
 .view-button { width: 34px; height: 32px; border: 1px solid var(--line); background: transparent; color: var(--muted-strong); font-size: 17px; }
 .view-button.is-active, .view-button:hover { border-color: var(--ink); color: var(--ink); }
 .preview-frame { min-height: 690px; max-width: 990px; margin: 0 auto; border: 1px solid var(--line); background: var(--preview); padding: clamp(22px, 5vw, 72px); }
+.preview-frame.is-mobile { max-width: 430px; }
 .page-preview { width: min(100%, var(--page-width)); max-width: 100%; min-height: 575px; margin: 0 auto; padding: clamp(30px, 5vw, 68px) clamp(23px, 6vw, 75px); background: var(--paper); }
 .page-overline, .page-caption { color: var(--muted-strong); font-size: 10px; letter-spacing: .1em; }
 .page-preview h1, .page-preview h2, .page-preview h3 { margin: 35px 0 24px; color: var(--ink); font-family: var(--heading-font); font-weight: 400; line-height: 1.04; }
