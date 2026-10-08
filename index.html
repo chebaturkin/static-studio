@@ -47,7 +47,16 @@
                 <span class="section-index">02</span>
                 <h2 id="blocks-title">Блоки страницы</h2>
               </div>
-              <button class="icon-button add-block" id="add-block" type="button" aria-label="Добавить блок">+</button>
+              <div class="add-block-controls">
+                <select class="select-control add-block-type" id="add-block-type" aria-label="Тип нового блока">
+                  <option value="heading">Заголовок</option>
+                  <option value="text">Текст</option>
+                  <option value="image">Изображение</option>
+                  <option value="link">Ссылка</option>
+                  <option value="divider">Разделитель</option>
+                </select>
+                <button class="icon-button add-block" id="add-block" type="button" aria-label="Добавить блок">+</button>
+              </div>
             </div>
             <ol class="block-list" id="block-list" aria-label="Порядок блоков">
               <li class="block-item is-selected" data-block-id="heading">
@@ -122,5 +131,6 @@
         </section>
       </main>
     </div>
+    <script type="module" src="app.js"></script>
   </body>
 </html>
