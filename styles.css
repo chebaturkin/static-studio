@@ -54,12 +54,15 @@ h2 { font-family: var(--serif); font-size: 21px; font-weight: 400; line-height: 
 .icon-button { width: 25px; height: 25px; padding: 0; border: 1px solid var(--line); background: transparent; font-size: 20px; line-height: 1; }
 .icon-button:hover { background: var(--ink); color: var(--paper); }
 .block-list { list-style: none; margin: 0 -26px; padding: 0; border-top: 1px solid var(--line); }
-.block-item { display: flex; align-items: center; border-bottom: 1px solid var(--line); }
+.block-item { display: flex; align-items: center; min-width: 0; border-bottom: 1px solid var(--line); }
 .block-item.is-selected { background: var(--line-soft); }
-.block-select { display: flex; flex: 1; align-items: center; gap: 10px; min-height: 43px; padding: 8px 12px 8px 26px; border: 0; background: transparent; text-align: left; }
+.block-select { display: flex; flex: 1 1 auto; align-items: center; gap: 10px; min-width: 0; min-height: 43px; padding: 8px 12px 8px 26px; border: 0; background: transparent; text-align: left; }
 .block-grip { color: var(--muted-strong); font-size: 17px; line-height: 1; }
 .block-number { color: var(--muted-strong); font-size: 10px; }
-.block-name { font-size: 12px; }
+.block-name { flex: 0 0 auto; font-size: 12px; white-space: nowrap; }
+.block-summary { min-width: 0; overflow: hidden; flex: 1 1 auto; text-overflow: ellipsis; white-space: nowrap; }
+.block-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 2px; padding: 5px 10px 5px 0; }
+.block-action { width: 30px; height: 30px; }
 .block-remove { width: 34px; height: 34px; margin-right: 12px; border: 0; background: transparent; color: var(--muted-strong); font-size: 18px; }
 .block-remove:hover { color: var(--accent-strong); }
 .block-editor { padding-top: 20px; }
@@ -132,6 +135,7 @@ h2 { font-family: var(--serif); font-size: 21px; font-weight: 400; line-height: 
   .brand-name { font-size: 18px; }
   .topbar-actions { justify-content: flex-start; flex-wrap: wrap; }
   .project-name { grid-column: auto; grid-row: auto; order: 0; }
+  .block-actions { display: grid; grid-template-columns: repeat(2, 30px); gap: 2px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
