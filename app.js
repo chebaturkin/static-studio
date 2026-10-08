@@ -24,6 +24,15 @@ const DEFAULT_SETTINGS = Object.freeze({
   bodyFont: 'mono',
 });
 
+const FONT_STACKS = Object.freeze({
+  serif: 'var(--serif)',
+  mono: 'var(--mono)',
+  system: 'ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  grotesk: '"Avenir Next", "Helvetica Neue", Helvetica, sans-serif',
+});
+
+const WIDTH_PRESETS = Object.freeze([640, 760, 960, 1200]);
+
 let idCounter = 0;
 
 export function createId(prefix = 'block') {
@@ -130,6 +139,10 @@ const dom = {
   editor: null,
   addType: null,
   addButton: null,
+  settingsMount: null,
+  previewMount: null,
+  previewStatus: null,
+  shell: null,
 };
 
 function cloneBlocks(templateId) {
@@ -175,6 +188,130 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
+}
+
+function safeHref(value) {
+  const href = String(value ?? '').trim();
+  // Backslashes can be normalized into URL separators by browsers; reject them
+  // before checking protocols so //\\evil.com and \\evil.com stay relative-safe.
+  if (!href || /[\\\u0000-\u001F\u007F]/.test(href) || href.startsWith('//')) return '';
+  if (/^https:\/\//i.test(href)) {
+    try {
+      return new URL(href).protocol === 'https:' ? href : '';
+    } catch {
+      return '';
+    }
+  }
+  // Permit relative paths, hashes, and query strings. Explicit protocols are rejected.
+  if (/^[a-z][a-z\d+.-]*:/i.test(href)) return '';
+  return href;
+}
+
+function textHtml(value, emptyLabel) {
+  const text = String(value ?? '');
+  if (!text.trim()) return `<span class="empty-hint">${escapeHtml(emptyLabel)}</span>`;
+  return escapeHtml(text).replace(/\r?\n/g, '<br>');
+}
+
+export function renderPreview(project = state) {
+  const blocks = Array.isArray(project?.blocks) ? project.blocks : [];
+  const template = TEMPLATE_LABELS[project?.template] || TEMPLATE_LABELS.note;
+  const content = blocks.map((block) => {
+    if (!block || !block.type) return '';
+    if (block.type === 'heading') {
+      const parsedLevel = Number.parseInt(block.level, 10);
+      const level = Number.isFinite(parsedLevel) ? Math.min(6, Math.max(1, parsedLevel)) : 1;
+      return `<h${level} class="preview-block preview-heading">${textHtml(block.content, 'Добавьте заголовок')}</h${level}>`;
+    }
+    if (block.type === 'text') {
+      return `<p class="preview-block preview-text">${textHtml(block.content, 'Добавьте текст')}</p>`;
+    }
+    if (block.type === 'image') {
+      const src = safeHref(block.src);
+      const alt = String(block.alt ?? '').trim();
+      const caption = String(block.caption ?? '').trim();
+      const media = src
+        ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy">`
+        : `<div class="preview-image-placeholder" role="img" aria-label="Изображение не добавлено"><span class="placeholder-cross" aria-hidden="true">✳</span><span class="empty-hint">Добавьте изображение</span></div>`;
+      return `<figure class="preview-block preview-image">${media}${caption ? `<figcaption class="page-caption">${textHtml(caption, '')}</figcaption>` : ''}</figure>`;
+    }
+    if (block.type === 'link') {
+      const href = safeHref(block.url);
+      const label = textHtml(block.label, 'Добавьте текст ссылки');
+      return href
+        ? `<p class="preview-block preview-link"><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${label}</a></p>`
+        : `<p class="preview-block preview-link is-disabled"><span aria-disabled="true">${label}</span><small class="empty-hint">Укажите безопасный адрес</small></p>`;
+    }
+    if (block.type === 'divider') {
+      return block.style === 'space'
+        ? '<div class="preview-block preview-space" aria-hidden="true"></div>'
+        : '<hr class="preview-block preview-rule">';
+    }
+    return '';
+  }).join('');
+  const html = `<article class="page-preview" tabindex="-1" data-template="${escapeHtml(project?.template || 'note')}">
+    <p class="page-overline">${escapeHtml(template)} · STATIC STUDIO</p>
+    ${content || '<p class="preview-empty">Добавьте блок в редакторе, чтобы увидеть его здесь.</p>'}
+  </article>`;
+  if (dom.previewMount) dom.previewMount.innerHTML = html;
+  if (dom.previewStatus) dom.previewStatus.textContent = `Предпросмотр обновлён: ${blocks.length} ${blocks.length === 1 ? 'блок' : 'блоков'}.`;
+  return html;
+}
+
+function applySettings() {
+  if (typeof document === 'undefined') return;
+  const settings = state.settings || DEFAULT_SETTINGS;
+  const root = document.documentElement;
+  const width = Math.min(1440, Math.max(480, Number(settings.width) || DEFAULT_SETTINGS.width));
+  const color = (value, fallback) => /^#[0-9a-f]{6}$/i.test(String(value ?? '')) ? String(value).toUpperCase() : fallback;
+  root.style.setProperty('--page-width', `${width}px`);
+  root.style.setProperty('--paper', color(settings.paper, DEFAULT_SETTINGS.paper));
+  root.style.setProperty('--ink', color(settings.ink, DEFAULT_SETTINGS.ink));
+  root.style.setProperty('--accent', color(settings.accent, DEFAULT_SETTINGS.accent));
+  root.style.setProperty('--heading-font', FONT_STACKS[settings.headingFont] || FONT_STACKS.serif);
+  root.style.setProperty('--body-font', FONT_STACKS[settings.bodyFont] || FONT_STACKS.mono);
+}
+
+function renderSettings() {
+  if (!dom.settingsMount) return;
+  const settings = state.settings || DEFAULT_SETTINGS;
+  const widthOptions = WIDTH_PRESETS.map((width) => `<option value="${width}"${Number(settings.width) === width ? ' selected' : ''}>${width} px</option>`).join('');
+  dom.settingsMount.innerHTML = `
+    <label class="field-label" for="page-width-preset">Ширина страницы</label>
+    <select class="select-control" id="page-width-preset" data-setting="widthPreset" aria-label="Предустановленная ширина страницы"><option value="">Своя ширина</option>${widthOptions}</select>
+    <label class="field-label" for="page-width">Точная ширина, px</label>
+    <input class="text-control compact-control" id="page-width" data-setting="width" type="number" min="480" max="1440" step="1" value="${escapeHtml(settings.width)}">
+    <label class="field-label" for="page-paper">Цвет бумаги</label>
+    <div class="color-field"><input id="page-paper" data-setting="paper" type="color" value="${escapeHtml(settings.paper)}"><span data-color-value="paper">${escapeHtml(settings.paper)}</span></div>
+    <label class="field-label" for="page-ink">Цвет текста</label>
+    <div class="color-field"><input id="page-ink" data-setting="ink" type="color" value="${escapeHtml(settings.ink)}"><span data-color-value="ink">${escapeHtml(settings.ink)}</span></div>
+    <label class="field-label" for="page-accent">Акцентный цвет</label>
+    <div class="color-field"><input id="page-accent" data-setting="accent" type="color" value="${escapeHtml(settings.accent)}"><span data-color-value="accent">${escapeHtml(settings.accent)}</span></div>
+    <label class="field-label" for="page-heading-font">Шрифт заголовков</label>
+    <select class="select-control" id="page-heading-font" data-setting="headingFont">
+      <option value="serif"${settings.headingFont === 'serif' ? ' selected' : ''}>С засечками</option><option value="grotesk"${settings.headingFont === 'grotesk' ? ' selected' : ''}>Гротеск</option><option value="system"${settings.headingFont === 'system' ? ' selected' : ''}>Системный</option>
+    </select>
+    <label class="field-label" for="page-body-font">Шрифт текста</label>
+    <select class="select-control" id="page-body-font" data-setting="bodyFont">
+      <option value="mono"${settings.bodyFont === 'mono' ? ' selected' : ''}>Моноширинный</option><option value="grotesk"${settings.bodyFont === 'grotesk' ? ' selected' : ''}>Гротеск</option><option value="system"${settings.bodyFont === 'system' ? ' selected' : ''}>Системный</option>
+    </select>`;
+  applySettings();
+}
+
+function syncSettingControls({ preserveActive = true } = {}) {
+  if (!dom.settingsMount) return;
+  const settings = state.settings || DEFAULT_SETTINGS;
+  dom.settingsMount.querySelectorAll('[data-color-value]').forEach((label) => {
+    const value = settings[label.dataset.colorValue] || '';
+    label.textContent = value;
+  });
+  const width = dom.settingsMount.querySelector('[data-setting="width"]');
+  if (width && (!preserveActive || document.activeElement !== width)) width.value = settings.width;
+  const preset = dom.settingsMount.querySelector('[data-setting="widthPreset"]');
+  if (preset && !WIDTH_PRESETS.includes(Number(settings.width))) preset.value = '';
+  dom.settingsMount.querySelectorAll('[data-setting="headingFont"], [data-setting="bodyFont"]').forEach((control) => {
+    if (document.activeElement !== control) control.value = settings[control.dataset.setting];
+  });
 }
 
 function fieldLabel(label, html) {
@@ -261,6 +398,8 @@ export function renderAll(options = {}) {
   renderComposition();
   renderBlockList();
   renderBlockEditor();
+  renderSettings();
+  renderPreview(state);
   restoreFocus(focus);
 }
 
@@ -341,6 +480,55 @@ function handleFieldInput(event) {
   updateBlockField(target.dataset.blockId, target.dataset.field, target.value);
 }
 
+function updateSetting(field, value) {
+  if (!state.settings || !(field in state.settings)) return;
+  if (field === 'width') {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return;
+    state.settings.width = Math.min(1440, Math.max(480, Math.round(parsed)));
+  } else if (['paper', 'ink', 'accent'].includes(field)) {
+    if (!/^#[0-9a-f]{6}$/i.test(value)) return;
+    state.settings[field] = value.toUpperCase();
+  } else if (['headingFont', 'bodyFont'].includes(field) && FONT_STACKS[value]) {
+    state.settings[field] = value;
+  }
+  applySettings();
+  syncSettingControls({ preserveActive: false });
+  renderPreview(state);
+}
+
+function handleSettingChange(event) {
+  const target = event.target.closest('[data-setting]');
+  if (!target || !dom.settingsMount.contains(target)) return;
+  // Let number inputs be edited naturally; commit their clamped value on change/blur.
+  if (target.dataset.setting === 'width' && event.type === 'input') return;
+  if (target.dataset.setting === 'widthPreset') {
+    if (target.value) updateSetting('width', target.value);
+    return;
+  }
+  updateSetting(target.dataset.setting, target.value);
+}
+
+function setPreviewMode(showPreview) {
+  if (!dom.shell) return;
+  dom.shell.classList.toggle('full-preview', showPreview);
+  const toggle = document.querySelector('#mobile-preview-toggle');
+  if (toggle) {
+    toggle.textContent = showPreview ? 'Редактор' : 'Предпросмотр';
+    toggle.setAttribute('aria-pressed', String(showPreview));
+  }
+  if (showPreview) dom.previewMount?.querySelector('.page-preview')?.focus?.({ preventScroll: true });
+}
+
+function handleGlobalClick(event) {
+  const action = event.target.closest('[data-action]')?.dataset.action;
+  if (action === 'toggle-preview') {
+    setPreviewMode(!dom.shell?.classList.contains('full-preview'));
+  } else if (action === 'return-editor') {
+    setPreviewMode(false);
+  }
+}
+
 function handleKeydown(event) {
   if (!event.altKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
   const row = event.target.closest('[data-block-id]');
@@ -378,6 +566,10 @@ function bindDom() {
   dom.editor = document.querySelector('#block-editor');
   dom.addType = document.querySelector('#add-block-type');
   dom.addButton = document.querySelector('#add-block');
+  dom.settingsMount = document.querySelector('#settings-mount');
+  dom.previewMount = document.querySelector('#preview-mount');
+  dom.previewStatus = document.querySelector('#preview-status');
+  dom.shell = document.querySelector('.studio-shell');
 
   if (dom.addButton && !dom.addType) {
     dom.addType = document.createElement('select');
@@ -397,6 +589,9 @@ function bindDom() {
   dom.list?.addEventListener('drop', handleDrop);
   dom.editor?.addEventListener('input', handleFieldInput);
   dom.editor?.addEventListener('change', handleFieldInput);
+  dom.settingsMount?.addEventListener('input', handleSettingChange);
+  dom.settingsMount?.addEventListener('change', handleSettingChange);
+  document.addEventListener('click', handleGlobalClick);
 }
 
 export function init() {

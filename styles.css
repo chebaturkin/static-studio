@@ -7,6 +7,9 @@
   --muted-strong: #655B51;
   --accent-strong: #A6402F;
   --preview: #E8DFD0;
+  --page-width: 670px;
+  --heading-font: var(--serif);
+  --body-font: var(--mono);
   --line-soft: rgba(207, 196, 179, .25);
   --serif: "PT Serif", "Iowan Old Style", "Palatino Linotype", serif;
   --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
@@ -75,22 +78,41 @@ h2 { font-family: var(--serif); font-size: 21px; font-weight: 400; line-height: 
 .view-button { width: 34px; height: 32px; border: 1px solid var(--line); background: transparent; color: var(--muted-strong); font-size: 17px; }
 .view-button.is-active, .view-button:hover { border-color: var(--ink); color: var(--ink); }
 .preview-frame { min-height: 690px; max-width: 990px; margin: 0 auto; border: 1px solid var(--line); background: var(--preview); padding: clamp(22px, 5vw, 72px); }
-.page-preview { max-width: 670px; min-height: 575px; margin: 0 auto; padding: clamp(30px, 5vw, 68px) clamp(23px, 6vw, 75px); background: var(--paper); }
+.page-preview { width: min(100%, var(--page-width)); max-width: 100%; min-height: 575px; margin: 0 auto; padding: clamp(30px, 5vw, 68px) clamp(23px, 6vw, 75px); background: var(--paper); }
 .page-overline, .page-caption { color: var(--muted-strong); font-size: 10px; letter-spacing: .1em; }
-.page-preview h2 { margin: 35px 0 24px; font-size: clamp(31px, 4.3vw, 56px); line-height: 1.04; }
-.page-deck { max-width: 430px; color: var(--muted-strong); font-family: var(--serif); font-size: 18px; line-height: 1.42; }
+.page-preview h1, .page-preview h2, .page-preview h3 { margin: 35px 0 24px; color: var(--ink); font-family: var(--heading-font); font-weight: 400; line-height: 1.04; }
+.page-preview h1 { font-size: clamp(31px, 4.3vw, 56px); }
+.page-preview h2 { font-size: clamp(26px, 3.5vw, 45px); }
+.page-preview h3 { font-size: clamp(21px, 2.8vw, 34px); }
+.page-deck, .preview-text { max-width: 465px; color: var(--muted-strong); font-family: var(--body-font); font-size: 16px; line-height: 1.55; }
 .preview-rule { width: 100%; margin: 42px 0 23px; border-top: 1px solid var(--line); }
-.page-copy { max-width: 465px; font-family: var(--serif); font-size: 16px; line-height: 1.55; }
+.page-copy { max-width: 465px; font-family: var(--body-font); font-size: 16px; line-height: 1.55; }
 .preview-image-placeholder { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 9px; min-height: 145px; margin-top: 40px; border: 1px solid var(--line); color: var(--muted-strong); font-size: 10px; letter-spacing: .04em; }
 .placeholder-cross { color: var(--accent); font-size: 22px; }
 .page-caption { margin-top: 9px; }
+.preview-image { margin: 40px 0 0; }
+.preview-image img { display: block; width: 100%; max-height: 520px; object-fit: cover; border: 1px solid var(--line); }
+.preview-link { margin: 30px 0 0; font-family: var(--body-font); }
+.preview-link a { color: var(--accent-strong); text-underline-offset: 4px; }
+.preview-link.is-disabled { display: grid; gap: 6px; color: var(--muted); }
+.preview-link small { letter-spacing: .04em; }
+.preview-space { height: 42px; }
+.preview-empty { margin-top: 35px; color: var(--muted-strong); font-family: var(--body-font); }
+.empty-hint { color: var(--muted-strong); font-style: italic; }
 .preview-note { max-width: 990px; margin: 14px auto 0; color: var(--muted-strong); font-size: 10px; }
+.mobile-preview-toggle, .return-editor-button { display: none; }
+
+.studio-shell.full-preview .editor-rail { display: none; }
+.studio-shell.full-preview .workspace { display: block; }
+.studio-shell.full-preview .preview-area { min-height: calc(100vh - 74px); }
+.studio-shell.full-preview .return-editor-button { display: inline-flex; margin: 14px auto 0; }
 
 @media (max-width: 760px) {
   .topbar { grid-template-columns: 1fr auto; gap: 12px; padding: 15px 18px; }
   .project-name { grid-column: 1 / -1; grid-row: 2; order: 3; }
   .topbar-actions { gap: 6px; }
   .button { padding: 7px 9px; }
+  .mobile-preview-toggle { display: inline-flex; }
   .workspace { display: block; min-height: 0; }
   .editor-rail { border-right: 0; }
   .rail-section { padding: 23px 18px; }
@@ -100,6 +122,7 @@ h2 { font-family: var(--serif); font-size: 21px; font-weight: 400; line-height: 
   .preview-area { padding: 27px 18px 30px; }
   .preview-frame { min-height: 0; padding: 16px; }
   .page-preview { min-height: 550px; padding: 34px 23px; }
+  .studio-shell.full-preview .topbar-actions .mobile-preview-toggle { display: inline-flex; }
 }
 
 @media (max-width: 480px) {

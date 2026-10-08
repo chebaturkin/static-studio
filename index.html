@@ -19,6 +19,7 @@
         </a>
         <div class="project-name" aria-label="Текущий проект">Без названия <span class="save-state">· локально</span></div>
         <nav class="topbar-actions" aria-label="Действия с проектом">
+          <button class="button button-quiet mobile-preview-toggle" id="mobile-preview-toggle" type="button" data-action="toggle-preview" aria-pressed="false">Предпросмотр</button>
           <button class="button button-quiet" id="import-project" type="button">Импорт проекта</button>
           <button class="button button-accent" id="export-project" type="button">Экспорт ZIP</button>
           <input class="visually-hidden" id="project-file" type="file" accept="application/json,.json" tabindex="-1">
@@ -112,21 +113,9 @@
               <button class="view-button" type="button" aria-pressed="false" aria-label="Просмотр на телефоне">▯</button>
             </div>
           </div>
-          <div class="preview-frame" id="preview-mount" role="region" aria-labelledby="preview-title">
-            <p class="visually-hidden" id="preview-status" aria-live="polite">Предпросмотр готов.</p>
-            <article class="page-preview">
-              <p class="page-overline">ЗАМЕТКА · 08 ОКТЯБРЯ 2026</p>
-              <h2>Место для вашей<br>следующей истории</h2>
-              <p class="page-deck">Соберите страницу из небольших элементов. Здесь можно менять текст, добавлять изображения и находить свой ритм.</p>
-              <div class="preview-rule"></div>
-              <p class="page-copy">Хорошая страница начинается с ясной мысли. Дайте ей достаточно воздуха, выберите один акцент и оставьте только то, что помогает рассказать историю.</p>
-              <div class="preview-image-placeholder" role="img" aria-label="Место для изображения">
-                <span class="placeholder-cross" aria-hidden="true">✳</span>
-                <span>Изображение появится здесь</span>
-              </div>
-              <p class="page-caption">01 — Подпись к изображению</p>
-            </article>
-          </div>
+          <p class="visually-hidden" id="preview-status" aria-live="polite">Предпросмотр готов.</p>
+          <div class="preview-frame" id="preview-mount" role="region" aria-labelledby="preview-title"></div>
+          <button class="button button-quiet return-editor-button" type="button" data-action="return-editor">Вернуться к редактору</button>
           <p class="preview-note">Предпросмотр обновляется по мере редактирования.</p>
         </section>
       </main>
