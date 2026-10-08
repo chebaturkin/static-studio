@@ -65,6 +65,8 @@ main { min-height: 100vh; padding: clamp(24px, 6vw, 72px); }
 .preview-rule { width: 100%; margin: 42px 0 23px; border: 0; border-top: 1px solid var(--line); }
 .preview-image { margin: 40px 0 0; }
 .preview-image img { display: block; width: 100%; max-height: 520px; object-fit: cover; border: 1px solid var(--line); }
+.preview-image-placeholder { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 9px; min-height: 145px; margin-top: 40px; border: 1px solid var(--line); color: var(--muted-strong); font-size: 10px; letter-spacing: .04em; }
+.placeholder-cross { color: var(--accent); font-size: 22px; }
 .page-caption { margin-top: 9px; }
 .preview-link { margin: 30px 0 0; font-family: var(--body-font); }
 .preview-link a { color: var(--accent-strong); text-underline-offset: 4px; }
