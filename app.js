@@ -312,13 +312,13 @@ function normalizeImportedProject(input) {
       if (Number.isFinite(width)) settings.width = Math.min(1440, Math.max(480, Math.round(width)));
     } else if (['paper', 'ink', 'accent'].includes(key)) {
       if (/^#[0-9a-f]{6}$/i.test(String(settingsInput[key] || ''))) settings[key] = String(settingsInput[key]).toUpperCase();
-    } else if (typeof settingsInput[key] === 'string' && FONT_STACKS[settingsInput[key]]) settings[key] = settingsInput[key];
+    } else if (typeof settingsInput[key] === 'string' && Object.hasOwn(FONT_STACKS, settingsInput[key])) settings[key] = settingsInput[key];
   }
   const usedIds = new Set();
   const blocks = input.blocks.map((raw) => {
     if (!raw || typeof raw !== 'object' || !Object.hasOwn(blockFactories, raw.type) || typeof blockFactories[raw.type] !== 'function') throw new Error('Файл содержит неизвестный тип блока.');
     const factory = blockFactories[raw.type];
-    let id = typeof raw.id === 'string' && raw.id ? raw.id : createId(raw.type);
+    let id = typeof raw.id === 'string' && raw.id && raw.id.length <= 120 ? raw.id : createId(raw.type);
     if (usedIds.has(id)) id = createId(raw.type);
     usedIds.add(id);
     const safe = factory({ id });
@@ -332,7 +332,7 @@ function normalizeImportedProject(input) {
     return safe;
   });
   const selectedBlockId = typeof input.selectedBlockId === 'string' && usedIds.has(input.selectedBlockId) ? input.selectedBlockId : blocks[0]?.id || null;
-  return { id: typeof input.id === 'string' ? input.id : createId('project'), title: typeof input.title === 'string' ? input.title.slice(0, MAX_TEXT_LENGTH) : 'Без названия', template, settings, blocks, selectedBlockId };
+  return { id: typeof input.id === 'string' && input.id.length <= 120 ? input.id : createId('project'), title: typeof input.title === 'string' ? input.title.slice(0, MAX_TEXT_LENGTH) : 'Без названия', template, settings, blocks, selectedBlockId };
 }
 
 export function importProjectData(input) {
