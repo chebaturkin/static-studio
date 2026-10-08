@@ -32,6 +32,8 @@ const FONT_STACKS = Object.freeze({
 });
 
 const WIDTH_PRESETS = Object.freeze([640, 760, 960, 1200]);
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+const PROJECT_VERSION = 1;
 
 let idCounter = 0;
 
@@ -61,7 +63,7 @@ export function createText(overrides = {}) {
 }
 
 export function createImage(overrides = {}) {
-  return withId('image', { src: '', alt: '', caption: '' }, overrides);
+  return withId('image', { src: '', alt: '', name: '', caption: '' }, overrides);
 }
 
 export function createLink(overrides = {}) {
@@ -143,6 +145,10 @@ const dom = {
   previewMount: null,
   previewStatus: null,
   shell: null,
+  imageFile: null,
+  projectFile: null,
+  exportButton: null,
+  importButton: null,
 };
 
 function cloneBlocks(templateId) {
@@ -195,6 +201,7 @@ function safeHref(value) {
   // Backslashes can be normalized into URL separators by browsers; reject them
   // before checking protocols so //\\evil.com and \\evil.com stay relative-safe.
   if (!href || /[\\\u0000-\u001F\u007F]/.test(href) || href.startsWith('//')) return '';
+  if (/^data:image\/(?:png|jpe?g|gif|webp|avif|svg\+xml);base64,[a-z\d+/]+=*$/i.test(href)) return href;
   if (/^https:\/\//i.test(href)) {
     try {
       return new URL(href).protocol === 'https:' ? href : '';
@@ -256,6 +263,70 @@ export function renderPreview(project = state) {
   if (dom.previewMount) dom.previewMount.innerHTML = html;
   if (dom.previewStatus) dom.previewStatus.textContent = `Предпросмотр обновлён: ${blocks.length} ${blocks.length === 1 ? 'блок' : 'блоков'}.`;
   return html;
+}
+
+function setProjectStatus(message, isError = false) {
+  if (!dom.previewStatus) return;
+  dom.previewStatus.textContent = message;
+  dom.previewStatus.dataset.status = isError ? 'error' : 'success';
+}
+
+function projectPayload() {
+  return {
+    version: PROJECT_VERSION,
+    id: state.id,
+    title: state.title,
+    template: state.template,
+    settings: { ...state.settings },
+    blocks: state.blocks.map((block) => ({ ...block })),
+  };
+}
+
+export function exportProject() {
+  if (typeof Blob === 'undefined' || typeof URL === 'undefined') return false;
+  const blob = new Blob([JSON.stringify(projectPayload(), null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'static-studio-project.json';
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+  setProjectStatus('Проект экспортирован в static-studio-project.json.');
+  return true;
+}
+
+function normalizeImportedProject(input) {
+  if (!input || typeof input !== 'object' || !Array.isArray(input.blocks) || input.blocks.length > 100) throw new Error('Файл проекта должен содержать массив блоков.');
+  const template = templates[input.template] ? input.template : 'note';
+  const settingsInput = input.settings && typeof input.settings === 'object' ? input.settings : {};
+  const settings = { ...DEFAULT_SETTINGS };
+  for (const key of Object.keys(DEFAULT_SETTINGS)) {
+    if (key === 'width') {
+      const width = Number(settingsInput[key]);
+      if (Number.isFinite(width)) settings.width = Math.min(1440, Math.max(480, Math.round(width)));
+    } else if (['paper', 'ink', 'accent'].includes(key)) {
+      if (/^#[0-9a-f]{6}$/i.test(String(settingsInput[key] || ''))) settings[key] = String(settingsInput[key]).toUpperCase();
+    } else if (typeof settingsInput[key] === 'string' && FONT_STACKS[settingsInput[key]]) settings[key] = settingsInput[key];
+  }
+  const blocks = input.blocks.map((raw) => {
+    if (!raw || typeof raw !== 'object' || !blockFactories[raw.type]) throw new Error('Файл содержит неизвестный тип блока.');
+    const factory = blockFactories[raw.type];
+    const safe = factory({ id: typeof raw.id === 'string' && raw.id ? raw.id : undefined });
+    for (const key of Object.keys(safe)) {
+      if (key === 'id' || key === 'type') continue;
+      if (typeof raw[key] === typeof safe[key]) safe[key] = raw[key];
+    }
+    return safe;
+  });
+  return { id: typeof input.id === 'string' ? input.id : createId('project'), title: typeof input.title === 'string' ? input.title : 'Без названия', template, settings, blocks };
+}
+
+export function importProjectData(input) {
+  const next = normalizeImportedProject(input);
+  Object.assign(state, next, { selectedBlockId: next.blocks[0]?.id || null });
+  renderAll();
+  setProjectStatus('Проект импортирован.');
+  return true;
 }
 
 function applySettings() {
@@ -380,7 +451,9 @@ function renderBlockEditor() {
   } else if (block.type === 'text') {
     html += textareaField({ block, field: 'content', label: 'Текст', value: block.content, placeholder: 'Введите текст блока' });
   } else if (block.type === 'image') {
+    html += `<button class="button button-quiet image-upload-button" type="button" data-action="upload-image" data-block-id="${escapeHtml(block.id)}">Загрузить изображение</button>`;
     html += inputField({ block, field: 'src', label: 'Адрес изображения', value: block.src, type: 'url', placeholder: 'https://…' });
+    html += inputField({ block, field: 'name', label: 'Имя файла', value: block.name || '', placeholder: 'Необязательно' });
     html += inputField({ block, field: 'alt', label: 'Описание', value: block.alt, placeholder: 'Что изображено' });
     html += inputField({ block, field: 'caption', label: 'Подпись', value: block.caption, placeholder: 'Необязательно' });
   } else if (block.type === 'link') {
@@ -526,7 +599,49 @@ function handleGlobalClick(event) {
     setPreviewMode(!dom.shell?.classList.contains('full-preview'));
   } else if (action === 'return-editor') {
     setPreviewMode(false);
+  } else if (action === 'upload-image') {
+    const block = getBlock(event.target.closest('[data-block-id]')?.dataset.blockId);
+    if (block?.type === 'image') {
+      if (dom.imageFile) dom.imageFile.dataset.blockId = block.id;
+      dom.imageFile?.click();
+    }
   }
+}
+
+function handleImageFile(event) {
+  const file = event.target.files?.[0];
+  const block = getBlock(event.target.dataset.blockId) || getSelectedBlock();
+  event.target.value = '';
+  if (!file || !block || block.type !== 'image') return;
+  if (!file.type.startsWith('image/')) return setProjectStatus('Не удалось загрузить файл: выберите изображение.', true);
+  if (file.size > MAX_IMAGE_SIZE) return setProjectStatus('Изображение слишком большое. Максимальный размер — 10 МБ.', true);
+  const reader = new FileReader();
+  reader.onerror = () => setProjectStatus('Не удалось прочитать изображение.', true);
+  reader.onload = () => {
+    block.src = String(reader.result || '');
+    block.name = file.name;
+    if (!block.alt) block.alt = file.name.replace(/\.[^.]+$/, '');
+    state.selectedBlockId = block.id;
+    renderAll();
+    setProjectStatus(`Изображение «${file.name}» добавлено.`);
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleProjectFile(event) {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onerror = () => setProjectStatus('Не удалось прочитать файл проекта.', true);
+  reader.onload = () => {
+    try {
+      importProjectData(JSON.parse(String(reader.result || '')));
+    } catch (error) {
+      setProjectStatus(error instanceof SyntaxError ? 'Файл проекта содержит некорректный JSON.' : `Не удалось импортировать проект: ${error.message}`, true);
+    }
+  };
+  reader.readAsText(file);
 }
 
 function handleKeydown(event) {
@@ -570,6 +685,10 @@ function bindDom() {
   dom.previewMount = document.querySelector('#preview-mount');
   dom.previewStatus = document.querySelector('#preview-status');
   dom.shell = document.querySelector('.studio-shell');
+  dom.imageFile = document.querySelector('#image-file');
+  dom.projectFile = document.querySelector('#project-file');
+  dom.exportButton = document.querySelector('#export-project');
+  dom.importButton = document.querySelector('#import-project');
 
   if (dom.addButton && !dom.addType) {
     dom.addType = document.createElement('select');
@@ -591,6 +710,10 @@ function bindDom() {
   dom.editor?.addEventListener('change', handleFieldInput);
   dom.settingsMount?.addEventListener('input', handleSettingChange);
   dom.settingsMount?.addEventListener('change', handleSettingChange);
+  dom.imageFile?.addEventListener('change', handleImageFile);
+  dom.projectFile?.addEventListener('change', handleProjectFile);
+  dom.exportButton?.addEventListener('click', exportProject);
+  dom.importButton?.addEventListener('click', () => dom.projectFile?.click());
   document.addEventListener('click', handleGlobalClick);
 }
 
