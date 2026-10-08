@@ -54,6 +54,7 @@ const EXPORT_STYLES = `:root {
 * { box-sizing: border-box; }
 html { min-width: 320px; background: var(--paper); }
 body { margin: 0; color: var(--ink); background: var(--paper); font-family: var(--body-font); font-size: 13px; line-height: 1.5; }
+h1, h2, p { margin: 0; }
 main { min-height: 100vh; padding: clamp(24px, 6vw, 72px); }
 .page-preview { width: min(100%, var(--page-width)); max-width: 100%; min-height: 575px; margin: 0 auto; padding: clamp(30px, 5vw, 68px) clamp(23px, 6vw, 75px); background: var(--paper); }
 .page-overline, .page-caption { color: var(--muted-strong); font-size: 10px; letter-spacing: .1em; }
@@ -394,8 +395,15 @@ function zipEntries(files) {
 
 export function buildZip(files) {
   const entries = zipEntries(files).map(({ name, data }) => {
-    const normalizedName = String(name || '').replaceAll('\\', '/').replace(/^\/+/, '');
-    if (!normalizedName || normalizedName.includes('../') || normalizedName === '..') throw new Error('ZIP entry has an unsafe name.');
+    const normalizedName = String(name ?? '');
+    const segments = normalizedName.split('/');
+    if (!normalizedName
+      || normalizedName.startsWith('/')
+      || /^[a-zA-Z]:[\\/]/.test(normalizedName)
+      || /[\\\u0000-\u001F\u007F]/.test(normalizedName)
+      || segments.some((segment) => !segment || segment === '.' || segment === '..')) {
+      throw new Error('ZIP entry has an unsafe name.');
+    }
     return { name: normalizedName, nameBytes: new TextEncoder().encode(normalizedName), data: asBytes(data) };
   });
   const localParts = [];
@@ -476,13 +484,10 @@ function safeAssetName(rawName, mime, index, usedNames) {
   const fallbackExtension = IMAGE_MIME_EXTENSIONS[mime] || 'bin';
   const original = String(rawName || '').split(/[\\/]/).pop().split('?')[0];
   const cleaned = original.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^[-.]+|[-.]+$/g, '');
-  const match = /^(.*?)(?:\.([a-zA-Z0-9]{1,8}))?$/.exec(cleaned);
-  let stem = (match?.[1] || '').replace(/[.]+$/g, '') || `image-${index + 1}`;
-  let extension = match?.[2]?.toLowerCase() || fallbackExtension;
-  if (!/^[a-z0-9]{1,8}$/.test(extension)) extension = fallbackExtension;
-  let candidate = `${stem}.${extension}`;
+  const stem = (cleaned.replace(/\.[a-zA-Z0-9]{1,8}$/, '').replace(/[.]+$/g, '') || `image-${index + 1}`);
+  let candidate = `${stem}.${fallbackExtension}`;
   let serial = 2;
-  while (usedNames.has(candidate)) candidate = `${stem}-${serial++}.${extension}`;
+  while (usedNames.has(candidate)) candidate = `${stem}-${serial++}.${fallbackExtension}`;
   usedNames.add(candidate);
   return candidate;
 }
