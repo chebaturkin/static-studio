@@ -122,6 +122,8 @@ export const state = {
   selectedBlockId: null,
 };
 
+let initialized = false;
+
 const dom = {
   composition: null,
   list: null,
@@ -212,7 +214,7 @@ function renderBlockList() {
   dom.list.innerHTML = state.blocks.map((block, index) => {
     const selected = block.id === state.selectedBlockId;
     const typeLabel = BLOCK_LABELS[block.type] || block.type;
-    const title = block.type === 'heading' || block.type === 'text' ? block.content.split('\n')[0] : typeLabel;
+    const title = block.type === 'heading' || block.type === 'text' ? String(block.content ?? '').split('\n')[0] : typeLabel;
     return `<li class="block-item${selected ? ' is-selected' : ''}" data-block-id="${escapeHtml(block.id)}" draggable="true" tabindex="0" aria-selected="${selected}">
       <button class="block-select" type="button" data-action="select" data-block-id="${escapeHtml(block.id)}" data-focus-key="row:${escapeHtml(block.id)}" aria-current="${selected ? 'true' : 'false'}">
         <span class="block-grip" aria-hidden="true">⠿</span><span class="block-number">${String(index + 1).padStart(2, '0')}</span><span class="block-name">${escapeHtml(typeLabel)}</span><span class="block-summary">${escapeHtml(title)}</span>
@@ -363,7 +365,9 @@ function handleDrop(event) {
   const toIndex = state.blocks.findIndex((block) => block.id === row.dataset.blockId);
   if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
   const [moved] = state.blocks.splice(fromIndex, 1);
-  state.blocks.splice(toIndex, 0, moved);
+  // Removing an earlier item shifts the later drop target one slot left.
+  const insertIndex = fromIndex < toIndex ? toIndex - 1 : toIndex;
+  state.blocks.splice(insertIndex, 0, moved);
   state.selectedBlockId = moved.id;
   renderAll({ focus: { focusKey: `row:${moved.id}`, start: null, end: null } });
 }
@@ -396,7 +400,8 @@ function bindDom() {
 }
 
 export function init() {
-  if (typeof document === 'undefined') return;
+  if (typeof document === 'undefined' || initialized) return;
+  initialized = true;
   bindDom();
   state.selectedBlockId = state.blocks[0]?.id || null;
   renderAll();
