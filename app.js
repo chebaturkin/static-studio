@@ -38,6 +38,59 @@ const MAX_PROJECT_SIZE = 15 * 1024 * 1024;
 const MAX_TEXT_LENGTH = 100000;
 const MAX_IMAGE_DATA_URL_LENGTH = 15 * 1024 * 1024;
 
+const EXPORT_STYLES = `:root {
+  --paper: #F3EBDD;
+  --ink: #28251F;
+  --line: #CFC4B3;
+  --muted: #84796C;
+  --accent: #C95B43;
+  --muted-strong: #655B51;
+  --accent-strong: #A6402F;
+  --page-width: 960px;
+  --heading-font: "PT Serif", "Iowan Old Style", "Palatino Linotype", serif;
+  --body-font: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+html { min-width: 320px; background: var(--paper); }
+body { margin: 0; color: var(--ink); background: var(--paper); font-family: var(--body-font); font-size: 13px; line-height: 1.5; }
+main { min-height: 100vh; padding: clamp(24px, 6vw, 72px); }
+.page-preview { width: min(100%, var(--page-width)); max-width: 100%; min-height: 575px; margin: 0 auto; padding: clamp(30px, 5vw, 68px) clamp(23px, 6vw, 75px); background: var(--paper); }
+.page-overline, .page-caption { color: var(--muted-strong); font-size: 10px; letter-spacing: .1em; }
+.page-preview h1, .page-preview h2, .page-preview h3, .page-preview h4, .page-preview h5, .page-preview h6 { margin: 35px 0 24px; color: var(--ink); font-family: var(--heading-font); font-weight: 400; line-height: 1.04; }
+.page-preview h1 { font-size: clamp(31px, 4.3vw, 56px); }
+.page-preview h2 { font-size: clamp(26px, 3.5vw, 45px); }
+.page-preview h3 { font-size: clamp(21px, 2.8vw, 34px); }
+.preview-text { max-width: 465px; color: var(--muted-strong); font-family: var(--body-font); font-size: 16px; line-height: 1.55; }
+.preview-rule { width: 100%; margin: 42px 0 23px; border: 0; border-top: 1px solid var(--line); }
+.preview-image { margin: 40px 0 0; }
+.preview-image img { display: block; width: 100%; max-height: 520px; object-fit: cover; border: 1px solid var(--line); }
+.page-caption { margin-top: 9px; }
+.preview-link { margin: 30px 0 0; font-family: var(--body-font); }
+.preview-link a { color: var(--accent-strong); text-underline-offset: 4px; }
+.preview-link.is-disabled { display: grid; gap: 6px; color: var(--muted); }
+.preview-link small { letter-spacing: .04em; }
+.preview-space { height: 42px; }
+.preview-empty { margin-top: 35px; color: var(--muted-strong); font-family: var(--body-font); }
+.empty-hint { color: var(--muted-strong); font-style: italic; }
+`;
+
+const IMAGE_MIME_EXTENSIONS = Object.freeze({
+  'image/avif': 'avif',
+  'image/gif': 'gif',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/svg+xml': 'svg',
+  'image/webp': 'webp',
+});
+
+const EXPORT_FONT_STACKS = Object.freeze({
+  serif: '"PT Serif", "Iowan Old Style", "Palatino Linotype", serif',
+  mono: '"IBM Plex Mono", "SFMono-Regular", Consolas, monospace',
+  system: 'ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  grotesk: '"Avenir Next", "Helvetica Neue", Helvetica, sans-serif',
+});
+
 let idCounter = 0;
 
 export function createId(prefix = 'block') {
@@ -151,6 +204,7 @@ const dom = {
   imageFile: null,
   projectFile: null,
   exportButton: null,
+  zipExportButton: null,
   importButton: null,
 };
 
@@ -223,7 +277,7 @@ function textHtml(value, emptyLabel) {
   return escapeHtml(text).replace(/\r?\n/g, '<br>');
 }
 
-export function renderPreview(project = state) {
+export function renderPreview(project = state, { mount = true } = {}) {
   const blocks = Array.isArray(project?.blocks) ? project.blocks : [];
   const template = TEMPLATE_LABELS[project?.template] || TEMPLATE_LABELS.note;
   const content = blocks.map((block) => {
@@ -263,8 +317,8 @@ export function renderPreview(project = state) {
     <p class="page-overline">${escapeHtml(template)} · STATIC STUDIO</p>
     ${content || '<p class="preview-empty">Добавьте блок в редакторе, чтобы увидеть его здесь.</p>'}
   </article>`;
-  if (dom.previewMount) dom.previewMount.innerHTML = html;
-  if (dom.previewStatus) dom.previewStatus.textContent = `Предпросмотр обновлён: ${blocks.length} ${blocks.length === 1 ? 'блок' : 'блоков'}.`;
+  if (mount && dom.previewMount) dom.previewMount.innerHTML = html;
+  if (mount && dom.previewStatus) dom.previewStatus.textContent = `Предпросмотр обновлён: ${blocks.length} ${blocks.length === 1 ? 'блок' : 'блоков'}.`;
   return html;
 }
 
@@ -297,6 +351,207 @@ export function exportProject() {
   setTimeout(() => URL.revokeObjectURL(url), 0);
   setProjectStatus('Проект экспортирован в static-studio-project.json.');
   return true;
+}
+
+function asBytes(value) {
+  if (typeof value === 'string') return new TextEncoder().encode(value);
+  if (value instanceof Uint8Array) return value;
+  if (value instanceof ArrayBuffer) return new Uint8Array(value);
+  if (ArrayBuffer.isView(value)) return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  throw new TypeError('ZIP entry data must be a string or byte array.');
+}
+
+const CRC32_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let index = 0; index < table.length; index += 1) {
+    let value = index;
+    for (let bit = 0; bit < 8; bit += 1) value = (value & 1) ? (0xEDB88320 ^ (value >>> 1)) : (value >>> 1);
+    table[index] = value >>> 0;
+  }
+  return table;
+})();
+
+export function crc32(input) {
+  const bytes = asBytes(input);
+  let crc = 0xFFFFFFFF;
+  for (const byte of bytes) crc = CRC32_TABLE[(crc ^ byte) & 0xFF] ^ (crc >>> 8);
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+function writeU16(view, offset, value) { view.setUint16(offset, value, true); }
+function writeU32(view, offset, value) { view.setUint32(offset, value >>> 0, true); }
+
+function zipEntries(files) {
+  if (files instanceof Map) return Array.from(files.entries()).map(([name, data]) => ({ name, data }));
+  if (Array.isArray(files)) return files.map((entry) => Array.isArray(entry)
+    ? { name: entry[0], data: entry[1] }
+    : { name: entry.name ?? entry.path, data: entry.data ?? entry.content });
+  if (files && typeof files === 'object') return Object.entries(files).map(([name, data]) => ({ name, data }));
+  throw new TypeError('ZIP files must be an object, Map, or array.');
+}
+
+export function buildZip(files) {
+  const entries = zipEntries(files).map(({ name, data }) => {
+    const normalizedName = String(name || '').replaceAll('\\', '/').replace(/^\/+/, '');
+    if (!normalizedName || normalizedName.includes('../') || normalizedName === '..') throw new Error('ZIP entry has an unsafe name.');
+    return { name: normalizedName, nameBytes: new TextEncoder().encode(normalizedName), data: asBytes(data) };
+  });
+  const localParts = [];
+  const centralParts = [];
+  let offset = 0;
+  for (const entry of entries) {
+    const header = new Uint8Array(30 + entry.nameBytes.length);
+    const view = new DataView(header.buffer);
+    writeU32(view, 0, 0x04034B50);
+    writeU16(view, 4, 10);
+    writeU16(view, 6, 0x0800);
+    writeU16(view, 8, 0);
+    writeU16(view, 10, 0);
+    writeU16(view, 12, 0);
+    writeU32(view, 14, crc32(entry.data));
+    writeU32(view, 18, entry.data.length);
+    writeU32(view, 22, entry.data.length);
+    writeU16(view, 26, entry.nameBytes.length);
+    writeU16(view, 28, 0);
+    header.set(entry.nameBytes, 30);
+    localParts.push(header, entry.data);
+
+    const central = new Uint8Array(46 + entry.nameBytes.length);
+    const centralView = new DataView(central.buffer);
+    writeU32(centralView, 0, 0x02014B50);
+    writeU16(centralView, 4, 20);
+    writeU16(centralView, 6, 10);
+    writeU16(centralView, 8, 0x0800);
+    writeU16(centralView, 10, 0);
+    writeU16(centralView, 12, 0);
+    writeU16(centralView, 14, 0);
+    writeU32(centralView, 16, crc32(entry.data));
+    writeU32(centralView, 20, entry.data.length);
+    writeU32(centralView, 24, entry.data.length);
+    writeU16(centralView, 28, entry.nameBytes.length);
+    writeU16(centralView, 30, 0);
+    writeU16(centralView, 32, 0);
+    writeU16(centralView, 34, 0);
+    writeU16(centralView, 36, 0);
+    writeU32(centralView, 38, 0);
+    writeU32(centralView, 42, offset);
+    central.set(entry.nameBytes, 46);
+    centralParts.push(central);
+    offset += header.length + entry.data.length;
+  }
+  const centralOffset = offset;
+  const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+  const eocd = new Uint8Array(22);
+  const eocdView = new DataView(eocd.buffer);
+  writeU32(eocdView, 0, 0x06054B50);
+  writeU16(eocdView, 4, 0);
+  writeU16(eocdView, 6, 0);
+  writeU16(eocdView, 8, entries.length);
+  writeU16(eocdView, 10, entries.length);
+  writeU32(eocdView, 12, centralSize);
+  writeU32(eocdView, 16, centralOffset);
+  writeU16(eocdView, 20, 0);
+  return new Blob([...localParts, ...centralParts, eocd], { type: 'application/zip' });
+}
+
+function decodeBase64(payload) {
+  const normalized = payload.replace(/\s/g, '');
+  if (typeof atob === 'function') {
+    const binary = atob(normalized);
+    return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  }
+  if (typeof Buffer !== 'undefined') return Uint8Array.from(Buffer.from(normalized, 'base64'));
+  throw new Error('This browser cannot decode image data.');
+}
+
+function parseImageDataUrl(value) {
+  const match = /^data:(image\/[a-z0-9.+-]+);base64,([a-z0-9+/=\s]+)$/i.exec(String(value || ''));
+  if (!match || !IMAGE_MIME_EXTENSIONS[match[1].toLowerCase()]) return null;
+  return { mime: match[1].toLowerCase(), bytes: decodeBase64(match[2]) };
+}
+
+function safeAssetName(rawName, mime, index, usedNames) {
+  const fallbackExtension = IMAGE_MIME_EXTENSIONS[mime] || 'bin';
+  const original = String(rawName || '').split(/[\\/]/).pop().split('?')[0];
+  const cleaned = original.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^[-.]+|[-.]+$/g, '');
+  const match = /^(.*?)(?:\.([a-zA-Z0-9]{1,8}))?$/.exec(cleaned);
+  let stem = (match?.[1] || '').replace(/[.]+$/g, '') || `image-${index + 1}`;
+  let extension = match?.[2]?.toLowerCase() || fallbackExtension;
+  if (!/^[a-z0-9]{1,8}$/.test(extension)) extension = fallbackExtension;
+  let candidate = `${stem}.${extension}`;
+  let serial = 2;
+  while (usedNames.has(candidate)) candidate = `${stem}-${serial++}.${extension}`;
+  usedNames.add(candidate);
+  return candidate;
+}
+
+function exportStyles(settings = {}) {
+  const color = (value, fallback) => /^#[0-9a-f]{6}$/i.test(String(value || '')) ? String(value).toUpperCase() : fallback;
+  const width = Math.min(1440, Math.max(480, Number(settings.width) || DEFAULT_SETTINGS.width));
+  const headingFont = EXPORT_FONT_STACKS[settings.headingFont] || EXPORT_FONT_STACKS[DEFAULT_SETTINGS.headingFont];
+  const bodyFont = EXPORT_FONT_STACKS[settings.bodyFont] || EXPORT_FONT_STACKS[DEFAULT_SETTINGS.bodyFont];
+  return EXPORT_STYLES
+    .replace('--paper: #F3EBDD;', `--paper: ${color(settings.paper, DEFAULT_SETTINGS.paper)};`)
+    .replace('--ink: #28251F;', `--ink: ${color(settings.ink, DEFAULT_SETTINGS.ink)};`)
+    .replace('--accent: #C95B43;', `--accent: ${color(settings.accent, DEFAULT_SETTINGS.accent)};`)
+    .replace('--page-width: 960px;', `--page-width: ${width}px;`)
+    .replace('--heading-font: "PT Serif", "Iowan Old Style", "Palatino Linotype", serif;', `--heading-font: ${headingFont};`)
+    .replace('--body-font: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;', `--body-font: ${bodyFont};`);
+}
+
+export function buildExportFiles(project = state) {
+  const source = project && typeof project === 'object' ? project : state;
+  const usedNames = new Set();
+  const assets = [];
+  const blocks = (Array.isArray(source.blocks) ? source.blocks : []).map((block, index) => {
+    const copy = { ...block };
+    if (copy.type === 'image') {
+      const image = parseImageDataUrl(copy.src);
+      if (image) {
+        const name = safeAssetName(copy.name, image.mime, index, usedNames);
+        assets.push({ name: `assets/${name}`, data: image.bytes });
+        copy.src = `assets/${name}`;
+      }
+    }
+    return copy;
+  });
+  const exportProject = { ...source, blocks };
+  const title = escapeHtml(String(source.title || 'Static Studio'));
+  const html = `<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="${escapeHtml(source.settings?.paper || DEFAULT_SETTINGS.paper)}">
+    <title>${title}</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body><main>${renderPreview(exportProject, { mount: false })}</main></body>
+</html>
+`;
+  return {
+    'index.html': html,
+    'styles.css': exportStyles(source.settings),
+    ...Object.fromEntries(assets.map((asset) => [asset.name, asset.data])),
+  };
+}
+
+export function exportZip(project = state) {
+  try {
+    const blob = buildZip(buildExportFiles(project));
+    if (typeof document === 'undefined' || typeof URL === 'undefined') return blob;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'static-studio-export.zip';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    setProjectStatus('Страница экспортирована в static-studio-export.zip.');
+    return blob;
+  } catch (error) {
+    setProjectStatus(`Не удалось экспортировать ZIP: ${error.message}`, true);
+    return false;
+  }
 }
 
 function normalizeImportedProject(input) {
@@ -706,6 +961,7 @@ function bindDom() {
   dom.imageFile = document.querySelector('#image-file');
   dom.projectFile = document.querySelector('#project-file');
   dom.exportButton = document.querySelector('#export-project');
+  dom.zipExportButton = document.querySelector('#export-zip');
   dom.importButton = document.querySelector('#import-project');
 
   if (dom.addButton && !dom.addType) {
@@ -731,6 +987,7 @@ function bindDom() {
   dom.imageFile?.addEventListener('change', handleImageFile);
   dom.projectFile?.addEventListener('change', handleProjectFile);
   dom.exportButton?.addEventListener('click', exportProject);
+  dom.zipExportButton?.addEventListener('click', () => exportZip(state));
   dom.importButton?.addEventListener('click', () => dom.projectFile?.click());
   document.addEventListener('click', handleGlobalClick);
 }
