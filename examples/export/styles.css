@@ -1,0 +1,38 @@
+:root {
+  --paper: #F3EBDD;
+  --ink: #28251F;
+  --line: #CFC4B3;
+  --muted: #84796C;
+  --accent: #C95B43;
+  --muted-strong: #655B51;
+  --accent-strong: #A6402F;
+  --page-width: 960px;
+  --heading-font: "PT Serif", "Iowan Old Style", "Palatino Linotype", serif;
+  --body-font: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+html { min-width: 320px; background: var(--paper); }
+body { margin: 0; color: var(--ink); background: var(--paper); font-family: var(--body-font); font-size: 13px; line-height: 1.5; }
+h1, h2, p { margin: 0; }
+main { min-height: 100vh; padding: clamp(24px, 6vw, 72px); }
+.page-preview { width: min(100%, var(--page-width)); max-width: 100%; min-height: 575px; margin: 0 auto; padding: clamp(30px, 5vw, 68px) clamp(23px, 6vw, 75px); background: var(--paper); }
+.page-overline, .page-caption { color: var(--muted-strong); font-size: 10px; letter-spacing: .1em; }
+.page-preview h1, .page-preview h2, .page-preview h3, .page-preview h4, .page-preview h5, .page-preview h6 { margin: 35px 0 24px; color: var(--ink); font-family: var(--heading-font); font-weight: 400; line-height: 1.04; }
+.page-preview h1 { font-size: clamp(31px, 4.3vw, 56px); }
+.page-preview h2 { font-size: clamp(26px, 3.5vw, 45px); }
+.page-preview h3 { font-size: clamp(21px, 2.8vw, 34px); }
+.preview-text { max-width: 465px; color: var(--muted-strong); font-family: var(--body-font); font-size: 16px; line-height: 1.55; }
+.preview-rule { width: 100%; margin: 42px 0 23px; border: 0; border-top: 1px solid var(--line); }
+.preview-image { margin: 40px 0 0; }
+.preview-image img { display: block; width: 100%; max-height: 520px; object-fit: cover; border: 1px solid var(--line); }
+.preview-image-placeholder { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 9px; min-height: 145px; margin-top: 40px; border: 1px solid var(--line); color: var(--muted-strong); font-size: 10px; letter-spacing: .04em; }
+.placeholder-cross { color: var(--accent); font-size: 22px; }
+.page-caption { margin-top: 9px; }
+.preview-link { margin: 30px 0 0; font-family: var(--body-font); }
+.preview-link a { color: var(--accent-strong); text-underline-offset: 4px; }
+.preview-link.is-disabled { display: grid; gap: 6px; color: var(--muted); }
+.preview-link small { letter-spacing: .04em; }
+.preview-space { height: 42px; }
+.preview-empty { margin-top: 35px; color: var(--muted-strong); font-family: var(--body-font); }
+.empty-hint { color: var(--muted-strong); font-style: italic; }
