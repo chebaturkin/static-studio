@@ -34,6 +34,9 @@ const FONT_STACKS = Object.freeze({
 const WIDTH_PRESETS = Object.freeze([640, 760, 960, 1200]);
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const PROJECT_VERSION = 1;
+const MAX_PROJECT_SIZE = 15 * 1024 * 1024;
+const MAX_TEXT_LENGTH = 100000;
+const MAX_IMAGE_DATA_URL_LENGTH = 15 * 1024 * 1024;
 
 let idCounter = 0;
 
@@ -277,6 +280,7 @@ function projectPayload() {
     id: state.id,
     title: state.title,
     template: state.template,
+    selectedBlockId: state.selectedBlockId,
     settings: { ...state.settings },
     blocks: state.blocks.map((block) => ({ ...block })),
   };
@@ -296,8 +300,10 @@ export function exportProject() {
 }
 
 function normalizeImportedProject(input) {
+  if (input?.version !== undefined && input.version !== PROJECT_VERSION) throw new Error(`Неподдерживаемая версия проекта: ${input.version}.`);
   if (!input || typeof input !== 'object' || !Array.isArray(input.blocks) || input.blocks.length > 100) throw new Error('Файл проекта должен содержать массив блоков.');
-  const template = templates[input.template] ? input.template : 'note';
+  if (input.template !== undefined && (typeof input.template !== 'string' || !Object.hasOwn(templates, input.template))) throw new Error('Файл содержит неизвестный шаблон.');
+  const template = input.template === undefined ? 'note' : input.template;
   const settingsInput = input.settings && typeof input.settings === 'object' ? input.settings : {};
   const settings = { ...DEFAULT_SETTINGS };
   for (const key of Object.keys(DEFAULT_SETTINGS)) {
@@ -308,17 +314,25 @@ function normalizeImportedProject(input) {
       if (/^#[0-9a-f]{6}$/i.test(String(settingsInput[key] || ''))) settings[key] = String(settingsInput[key]).toUpperCase();
     } else if (typeof settingsInput[key] === 'string' && FONT_STACKS[settingsInput[key]]) settings[key] = settingsInput[key];
   }
+  const usedIds = new Set();
   const blocks = input.blocks.map((raw) => {
-    if (!raw || typeof raw !== 'object' || !blockFactories[raw.type]) throw new Error('Файл содержит неизвестный тип блока.');
+    if (!raw || typeof raw !== 'object' || !Object.hasOwn(blockFactories, raw.type) || typeof blockFactories[raw.type] !== 'function') throw new Error('Файл содержит неизвестный тип блока.');
     const factory = blockFactories[raw.type];
-    const safe = factory({ id: typeof raw.id === 'string' && raw.id ? raw.id : undefined });
+    let id = typeof raw.id === 'string' && raw.id ? raw.id : createId(raw.type);
+    if (usedIds.has(id)) id = createId(raw.type);
+    usedIds.add(id);
+    const safe = factory({ id });
     for (const key of Object.keys(safe)) {
       if (key === 'id' || key === 'type') continue;
-      if (typeof raw[key] === typeof safe[key]) safe[key] = raw[key];
+      if (typeof raw[key] === typeof safe[key]) {
+        if (typeof raw[key] === 'string' && raw[key].length > (key === 'src' ? MAX_IMAGE_DATA_URL_LENGTH : MAX_TEXT_LENGTH)) throw new Error('Файл содержит слишком длинное поле.');
+        safe[key] = raw[key];
+      }
     }
     return safe;
   });
-  return { id: typeof input.id === 'string' ? input.id : createId('project'), title: typeof input.title === 'string' ? input.title : 'Без названия', template, settings, blocks };
+  const selectedBlockId = typeof input.selectedBlockId === 'string' && usedIds.has(input.selectedBlockId) ? input.selectedBlockId : blocks[0]?.id || null;
+  return { id: typeof input.id === 'string' ? input.id : createId('project'), title: typeof input.title === 'string' ? input.title.slice(0, MAX_TEXT_LENGTH) : 'Без названия', template, settings, blocks, selectedBlockId };
 }
 
 export function importProjectData(input) {
@@ -632,6 +646,10 @@ function handleProjectFile(event) {
   const file = event.target.files?.[0];
   event.target.value = '';
   if (!file) return;
+  if (file.size > MAX_PROJECT_SIZE) {
+    setProjectStatus('Файл проекта слишком большой. Максимальный размер — 15 МБ.', true);
+    return;
+  }
   const reader = new FileReader();
   reader.onerror = () => setProjectStatus('Не удалось прочитать файл проекта.', true);
   reader.onload = () => {
