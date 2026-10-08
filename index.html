@@ -103,7 +103,8 @@
               <button class="view-button" type="button" aria-pressed="false" aria-label="Просмотр на телефоне">▯</button>
             </div>
           </div>
-          <div class="preview-frame" id="preview-mount" aria-label="Предпросмотр страницы" aria-live="polite">
+          <div class="preview-frame" id="preview-mount" role="region" aria-labelledby="preview-title">
+            <p class="visually-hidden" id="preview-status" aria-live="polite">Предпросмотр готов.</p>
             <article class="page-preview">
               <p class="page-overline">ЗАМЕТКА · 08 ОКТЯБРЯ 2026</p>
               <h2>Место для вашей<br>следующей истории</h2>

@@ -2,8 +2,8 @@
   --paper: #F3EBDD;
   --ink: #28251F;
   --line: #CFC4B3;
-  --muted: #84796C;
-  --accent: #C95B43;
+  --muted: #655B51;
+  --accent: #A6402F;
   --preview: #E8DFD0;
   --line-soft: rgba(207, 196, 179, .25);
   --serif: "PT Serif", "Iowan Old Style", "Palatino Linotype", serif;
@@ -98,6 +98,14 @@ h2 { font-family: var(--serif); font-size: 21px; font-weight: 400; line-height: 
   .preview-area { padding: 27px 18px 30px; }
   .preview-frame { min-height: 0; padding: 16px; }
   .page-preview { min-height: 550px; padding: 34px 23px; }
+}
+
+@media (max-width: 480px) {
+  .topbar { grid-template-columns: 1fr; align-items: start; }
+  .brand { min-width: 0; }
+  .brand-name { font-size: 18px; }
+  .topbar-actions { justify-content: flex-start; flex-wrap: wrap; }
+  .project-name { grid-column: auto; grid-row: auto; order: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
