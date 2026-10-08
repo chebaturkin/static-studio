@@ -4,6 +4,8 @@
   --line: #CFC4B3;
   --muted: #84796C;
   --accent: #C95B43;
+  --preview: #E8DFD0;
+  --line-soft: rgba(207, 196, 179, .25);
   --serif: "PT Serif", Georgia, serif;
   --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
 }
@@ -48,7 +50,7 @@ h2 { font-family: var(--serif); font-size: 21px; font-weight: 400; line-height: 
 .icon-button:hover { background: var(--ink); color: var(--paper); }
 .block-list { list-style: none; margin: 0 -26px; padding: 0; border-top: 1px solid var(--line); }
 .block-item { display: flex; align-items: center; border-bottom: 1px solid var(--line); }
-.block-item.is-selected { background: rgba(207, 196, 179, .25); }
+.block-item.is-selected { background: var(--line-soft); }
 .block-select { display: flex; flex: 1; align-items: center; gap: 10px; min-height: 43px; padding: 8px 12px 8px 26px; border: 0; background: transparent; text-align: left; }
 .block-grip { color: var(--muted); font-size: 17px; line-height: 1; }
 .block-number { color: var(--muted); font-size: 10px; }
@@ -70,7 +72,7 @@ h2 { font-family: var(--serif); font-size: 21px; font-weight: 400; line-height: 
 .preview-controls { display: flex; gap: 6px; padding-top: 4px; }
 .view-button { width: 34px; height: 32px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-size: 17px; }
 .view-button.is-active, .view-button:hover { border-color: var(--ink); color: var(--ink); }
-.preview-frame { min-height: 690px; max-width: 990px; margin: 0 auto; border: 1px solid var(--line); background: #e8dfd0; padding: clamp(22px, 5vw, 72px); }
+.preview-frame { min-height: 690px; max-width: 990px; margin: 0 auto; border: 1px solid var(--line); background: var(--preview); padding: clamp(22px, 5vw, 72px); }
 .page-preview { max-width: 670px; min-height: 575px; margin: 0 auto; padding: clamp(30px, 5vw, 68px) clamp(23px, 6vw, 75px); background: var(--paper); }
 .page-overline, .page-caption { color: var(--muted); font-size: 10px; letter-spacing: .1em; }
 .page-preview h2 { margin: 35px 0 24px; font-size: clamp(31px, 4.3vw, 56px); line-height: 1.04; }
