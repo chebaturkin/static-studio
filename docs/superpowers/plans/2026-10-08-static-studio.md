@@ -1,140 +1,132 @@
-# Static Studio Implementation Plan
+# Static Studio Reliability Pass Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended) or executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
-**Goal:** Build a GitHub Pages-ready, browser-only typography workshop with live Preview, four starter compositions, block editing/reordering, local image import, JSON round trips, and self-contained ZIP export.
+**Goal:** Harden the existing browser-only typography workshop with reversible editing, resilient local persistence, precise live updates, safe offline export, and a restrained paper-based interface.
 
-**Architecture:** A vanilla static app splits state/serialization, rendering, and ZIP generation into focused files. `index.html` provides semantic structure, `styles.css` owns the paper/editor visual system and responsive states, and `app.js` owns project state, templates, editor interactions, preview rendering, JSON import/export, and a tiny uncompressed ZIP writer. Exported pages reuse generated HTML and a standalone stylesheet and rewrite local image data URLs into `assets/`.
+**Architecture:** Keep the direct-file vanilla `index.html`/`styles.css`/`app.js` deployment shape. Add explicit project snapshots, bounded history, resilient local persistence, pure validation helpers, and targeted DOM updates inside `app.js`; keep the paper/editor tokens in `styles.css` and mirror only the standalone export tokens in `EXPORT_STYLES`. Exported pages reuse generated semantic content and package local image data with validated ZIP paths.
 
-**Tech Stack:** HTML5, CSS3, modern browser JavaScript (FileReader, Blob, URL, download, CompressionStream not required), GitHub Pages. No runtime CDN or backend.
+**Tech Stack:** Vanilla static HTML/CSS/JS, GitHub Pages, FileReader, Blob, URL, localStorage, and Node's built-in test runner for pure serialization/export regression tests. No runtime CDN or backend.
 
 ---
 
-### Task 1: Create the static shell and design tokens
+### Task 0: Add regression tests before implementation
 
 **Files:**
-- Create: `index.html`
-- Create: `styles.css`
+- Create: `tests/static-studio.test.js`
+- Create or modify: `package.json`
 
-- [ ] **Step 1: Write semantic shell**
-  Add the header mark, project title, import/export controls, editor rail sections, block list mount, settings mount, and preview mount with accessible labels and live regions.
+- [ ] **Step 1: Load `app.js` without a DOM**
+  Use Node `vm` to evaluate `app.js` with `document` undefined and a small `window` object. Read APIs from `window.StaticStudio` so tests exercise production functions without a browser dependency.
 
-- [ ] **Step 2: Define the visual system**
-  Add CSS custom properties for paper/ink/rule/muted/accent, PT Serif/IBM Plex Mono fallback stacks, two-column desktop layout, paper preview, hairlines, visible focus rings, responsive mobile stack, and reduced-motion media query. Keep controls rectangular with 1px borders and no gradients/shadows.
+- [ ] **Step 2: Write failing safety tests**
+  Cover link protocol rejection, imported heading levels clamped to 1–3, imported block cap, image MIME whitelist, long and case-conflicting asset names, and ZIP output accepted by a standard extractor.
 
-- [ ] **Step 3: Smoke-check the shell**
-  Open `index.html` in a browser and confirm the editor rail, preview paper, and mobile stack render without JavaScript errors.
+- [ ] **Step 3: Run the red suite**
+  Run `node --test tests/static-studio.test.js`; the new assertions must fail against the current implementation for the newly requested behavior.
 
-- [ ] **Step 4: Commit**
-  `git add index.html styles.css && git commit -m "feat: add Static Studio shell"`
-
-### Task 2: Add project state, templates, and editor rendering
+### Task 1: Refresh the semantic shell
 
 **Files:**
-- Create: `app.js`
-- Modify: `index.html` to load `app.js` as a module/defer script
+- Modify: `index.html`
 
-- [ ] **Step 1: Define the state shape**
-  Implement `createId`, `createDefaultProject`, four template definitions, block factories for `heading`, `text`, `image`, `link`, and `divider`, and settings defaults.
+- [ ] **Step 1: Replace stale mounts**
+  Leave the block list and editor as empty mounts so a no-JavaScript fallback cannot advertise controls that do not exist. Keep the existing section headings and labels.
 
-- [ ] **Step 2: Render composition controls**
-  Render four template buttons. Selecting a template replaces blocks with a deep clone and calls `renderAll()`.
+- [ ] **Step 2: Add project identity and history controls**
+  Replace the static project-name text with a labeled `#project-title` text input. Add Undo and Redo buttons with `aria-label`, disabled state, and keyboard shortcut hints. Add a visible `#project-status` live region beside the local-save indicator.
 
-- [ ] **Step 3: Render editable block list**
-  Render each block with a drag handle, type label, move up/down buttons, duplicate/delete buttons, and type-specific fields. Use event delegation to update state and preserve focus after rerender.
+- [ ] **Step 3: Keep only functional document metadata**
+  Keep charset and viewport for direct local rendering, remove the description/theme-color metadata and any visual metadata-like copy. Preserve the existing deferred script and local stylesheet.
 
-- [ ] **Step 4: Add block creation**
-  Add a select/button control that appends one of the five block types with sensible starter content and re-renders.
+### Task 2: Add history, autosave, and project identity
 
-- [ ] **Step 5: Add keyboard reordering**
-  Implement `moveBlock(id, direction)` and wire buttons plus `Alt+ArrowUp/Down` on focused block rows. Disable controls at list boundaries.
+**Files:**
+- Modify: `app.js`
 
-- [ ] **Step 6: Commit**
-  `git add index.html app.js && git commit -m "feat: add templates and block editor"`
+- [ ] **Step 1: Define versioned snapshots**
+  Add `PROJECT_VERSION = 2`, `STORAGE_KEY`, `MAX_HISTORY = 50`, and helpers that clone `id/title/template/settings/blocks/selectedBlockId` without DOM references.
 
-### Task 3: Build live Preview and settings
+- [ ] **Step 2: Implement bounded history**
+  Add `history = { past: [], future: [] }`, `recordHistory(label)`, `undo()`, `redo()`, and `syncHistoryControls()`. Push one snapshot for structural actions and coalesce repeated edits with the same `blockId:field` key during a short typing window. Clear future entries after a new edit.
+
+- [ ] **Step 3: Implement safe local persistence**
+  Add debounced `saveToStorage()` with `try/catch` around `localStorage`; include only the versioned project payload. On startup, parse and validate the stored payload through `normalizeImportedProject`; ignore corrupt or unavailable data and report a recoverable status.
+
+- [ ] **Step 4: Wire title and keyboard shortcuts**
+  Bind `#project-title` input to `state.title` with a 120-character limit, use it for JSON/HTML export titles, and handle `Cmd/Ctrl+Z`, `Cmd/Ctrl+Shift+Z`, and `Cmd/Ctrl+Y` outside editable text controls.
+
+### Task 3: Make rendering incremental and accessible
 
 **Files:**
 - Modify: `app.js`
 - Modify: `styles.css`
 
-- [ ] **Step 1: Render Preview from state**
-  Implement `renderPreview(project)` with semantic `<article>` output, type-specific markup, empty content hints, safe link attributes, and an image fallback state.
+- [ ] **Step 1: Make block list semantics valid**
+  Render `ol[role=listbox]`, `li[role=option]`, and one focusable selection button per row. Remove the extra row tab stop, preserve `aria-selected`, and add `aria-keyshortcuts` to the selection button.
 
-- [ ] **Step 2: Add settings controls**
-  Render width presets, color inputs for paper/ink/accent, and two font-stack selects. Bind inputs to state and CSS variables; re-render only the affected surfaces where practical.
+- [ ] **Step 2: Avoid editor replacement during typing**
+  Change `updateBlockField` to mutate state, record/coalesce history, update the affected row summary, update the preview, and schedule persistence without calling `renderAll()`. Use full rendering only for structural changes and imports.
 
-- [ ] **Step 3: Add Preview mode affordance**
-  Add a compact toggle for `Edit`/`Preview` on small screens and a full-preview class that hides the editor rail while retaining a return control.
+- [ ] **Step 3: Improve settings updates**
+  Apply width/color/font changes immediately when valid, keep the active input intact, and update preview without replacing settings markup.
 
-- [ ] **Step 4: Accessibility pass**
-  Add `aria-live` to status/error output, labels for all inputs, focus-visible styles, and reduced-motion-safe transitions.
+- [ ] **Step 4: Improve drag/drop feedback**
+  Track the dragged id, add `.is-dragging` and `.drop-target` classes, announce the resulting position in the live status, and keep Alt+Arrow movement as the keyboard path.
 
-- [ ] **Step 5: Commit**
-  `git add app.js styles.css && git commit -m "feat: add live preview and settings"`
+- [ ] **Step 5: Refine touch and contrast tokens**
+  Give icon actions at least 40px hit areas, use the stronger muted token for readable labels, and keep the existing rectangular, no-gradient design system.
 
-### Task 4: Implement local images and JSON import/export
-
-**Files:**
-- Modify: `index.html`
-- Modify: `app.js`
-
-- [ ] **Step 1: Import local images**
-  Add a hidden file input accepting image types. On selection, use `FileReader.readAsDataURL`, store `src`, `alt`, and original filename on the image block, and report unsupported/oversize files clearly.
-
-- [ ] **Step 2: JSON export**
-  Serialize the current project with `JSON.stringify`, create a Blob, and download `static-studio-project.json`.
-
-- [ ] **Step 3: JSON import**
-  Parse a selected JSON file, validate settings/templates/blocks, merge safe defaults, reject malformed projects with an in-app error, and call `renderAll()` on success.
-
-- [ ] **Step 4: Empty/error states**
-  Ensure a new project with zero blocks shows a useful Preview hint and that missing images render a recoverable editor message rather than throwing.
-
-- [ ] **Step 5: Commit**
-  `git add index.html app.js && git commit -m "feat: support local images and project JSON"`
-
-### Task 5: Implement standalone ZIP export
+### Task 4: Harden content and image behavior
 
 **Files:**
 - Modify: `app.js`
-- Create: `export-template.css` only if keeping export CSS separate is clearer; otherwise generate CSS from the same token string
+- Modify: `styles.css`
 
-- [ ] **Step 1: Add CRC32 and ZIP writer**
-  Implement `crc32(bytes)` and `buildZip(files)` for uncompressed store entries with local headers, central directory, and end record. Return a Blob with `application/zip`.
+- [ ] **Step 1: Remove decorative preview copy**
+  Render only the page blocks and purposeful empty states. Keep user-facing editor headings intact; remove preview overlines/kickers from exported HTML.
 
-- [ ] **Step 2: Generate export files**
-  Implement `buildExportFiles(project)` to produce `index.html`, `styles.css`, and `assets/<safe-name>` for every data URL image. Rewrite preview image `src` values to relative asset paths.
+- [ ] **Step 2: Validate block and image limits**
+  Cap UI additions at 100 blocks, clamp imported heading levels to 1–3, accept only exporter-supported image MIME types, and verify the target image block still exists when FileReader completes.
 
-- [ ] **Step 3: Wire the Export ZIP action**
-  Download `static-studio-export.zip`, update status text, and catch/report failures without losing the in-memory project.
+- [ ] **Step 3: Add image recovery**
+  Add a clear-image action, attach an error handler for remote image failures, replace a broken image with a placeholder, and report the block-specific error without throwing.
 
-- [ ] **Step 4: Verify offline export**
-  Unzip a generated archive, open `index.html` directly from disk, and confirm text, links, styles, and imported local images work without a server or network.
+- [ ] **Step 4: Mark external export dependencies**
+  Keep data URLs packaged into `assets/`; leave remote URLs intact but report that they remain external so a user understands the offline limitation.
 
-- [ ] **Step 5: Commit**
-  `git add app.js && git commit -m "feat: export standalone ZIP"`
+### Task 5: Make ZIP export safe and deterministic
 
-### Task 6: Documentation, demo asset, and final verification
+**Files:**
+- Modify: `app.js`
+
+- [ ] **Step 1: Bound asset names**
+  Limit sanitized UTF-8 asset names to 180 bytes, deduplicate case-insensitively, and avoid Windows device basenames such as `CON`, `NUL`, `COM1`, and `LPT1`.
+
+- [ ] **Step 2: Validate ZIP limits**
+  Reject empty/traversal/control paths, more than 65,535 entries, names over 255 bytes, and data/offset values above ZIP32 limits before writing headers.
+
+- [ ] **Step 3: Sanitize exported document fields**
+  Use the same color/title validation as the editor for `theme-color` removal and HTML title escaping. Ensure every exported image path is relative and safe.
+
+### Task 6: Verify and document the finished workflow
 
 **Files:**
 - Modify: `README.md`
-- Create: `demo.gif`
-- Create: `examples/export/index.html`
-- Create: `examples/export/styles.css`
-- Create: `examples/export/assets/` with one small local image if available
+- Modify: `examples/export/index.html` and `examples/export/styles.css` only if generated output changes.
+- Test: `tests/static-studio.test.js`
 
-- [ ] **Step 1: Create a lightweight demo GIF**
-  Capture two or three local screenshots/states or generate a small animated GIF showing the editor and Preview. Keep it lightweight and checked into the repo.
+- [ ] **Step 1: Run automated regression tests**
+  Run `node --test tests/static-studio.test.js` and confirm all pure helper/export cases pass.
 
-- [ ] **Step 2: Document usage**
-  Replace the placeholder README with setup/open instructions, GIF embed, feature list, JSON workflow, sample export link, and direct-file instructions: unzip, double-click `index.html`, no build needed.
+- [ ] **Step 2: Run browser smoke checks**
+  Open the root `index.html` from disk and verify template switching, title editing, autosave recovery, undo/redo, add/edit/duplicate/delete, keyboard and drag reorder, local image import/clear, broken-image recovery, settings, JSON round trip, ZIP export, empty state, malformed JSON, mobile preview, reduced motion, and focus order.
 
-- [ ] **Step 3: Verify desktop/mobile and keyboard paths**
-  Test template switching, block add/edit/reorder/delete, JSON import/export, image import, width/color/font settings, ZIP export, `Tab` focus, `Alt+Arrow` reorder, mobile layout, empty state, malformed JSON, missing image, and reduced motion.
+- [ ] **Step 3: Inspect an actual ZIP**
+  Export a project with local and external images, unpack it with `unzip -t`, open its `index.html` directly, and verify text, styles, local assets, and the external-image status behavior.
 
-- [ ] **Step 4: Commit**
-  `git add README.md demo.gif examples && git commit -m "docs: add demo and offline export example"`
+- [ ] **Step 4: Update README**
+  Document autosave/undo/redo, title editing, supported image formats, external-image limitation, and the direct-file workflow. Keep the existing GIF and example export links.
 
-- [ ] **Step 5: Final review**
-  Run `git log --oneline -6`, inspect the generated archive contents, and summarize verified paths and any browser limitations.
+- [ ] **Step 5: Commit**
+  Run `git diff --check`, review `git status`, and create focused commits for tests, editor reliability, and export/accessibility changes.

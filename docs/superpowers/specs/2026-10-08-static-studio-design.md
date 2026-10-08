@@ -24,6 +24,21 @@ A small typography workshop for turning text, images, and links into a single po
 7. Export a self-contained ZIP with `index.html`, `styles.css`, and `assets/`.
 8. Save/import the project as JSON for a fully local round trip.
 
+## Reliability pass (2026-10-08)
+- The editor remains browser-only and works from `file://`; there is no server, account, CDN, or external runtime.
+- The page title is editable and is used in the exported document title and JSON payload.
+- A bounded undo/redo history makes template replacement, deletion, reordering, and field edits reversible. Keyboard shortcuts are `Cmd/Ctrl+Z`, `Cmd/Ctrl+Shift+Z`, and `Cmd/Ctrl+Y`.
+- The current project is autosaved to `localStorage` when available. A corrupt or unavailable store never blocks startup; the in-memory editor continues to work and reports the limitation in its status line.
+- Field typing updates the model and preview without replacing the active editor control. History coalesces consecutive keystrokes in one field into a single undo step.
+- Template changes and deletion use the undo path instead of destructive confirmation dialogs. The status line names the action and exposes the available undo shortcut.
+- The block list uses valid listbox/option semantics, keyboard move controls, and a visible drag insertion target. The live status announces reorder results.
+- Image uploads accept only formats that the exporter can package. Broken remote images get a recoverable placeholder; external images remain explicitly marked as external during ZIP export.
+- ZIP entry names are UTF-8 length limited, case-insensitively deduplicated, and protected from traversal, reserved device names, and integer overflow.
+- The preview contains only user content and purposeful empty/error states. Decorative overlines and metadata-like labels are kept out of the exported page.
+
+## Out of scope
+- Rich text editing, CMS behavior, accounts, cloud sync, collaboration, analytics, social metadata, and server-side image fetching.
+
 ## Architecture
 - Static vanilla HTML/CSS/JS, deployable to GitHub Pages.
 - A single in-memory JSON state owns template, settings, and block content.
