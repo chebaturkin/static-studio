@@ -33,7 +33,14 @@ const FONT_STACKS = Object.freeze({
 
 const WIDTH_PRESETS = Object.freeze([640, 760, 960, 1200]);
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
-const PROJECT_VERSION = 1;
+const PROJECT_VERSION = 2;
+const STORAGE_KEY = 'static-studio:project:v2';
+const MAX_HISTORY = 50;
+const MAX_BLOCKS = 100;
+const MAX_TITLE_LENGTH = 120;
+const MAX_ZIP_ENTRIES = 65535;
+const MAX_ZIP_NAME_BYTES = 255;
+const MAX_ZIP_VALUE = 0xFFFFFFFF;
 const MAX_PROJECT_SIZE = 15 * 1024 * 1024;
 const MAX_TEXT_LENGTH = 100000;
 const MAX_IMAGE_DATA_URL_LENGTH = 15 * 1024 * 1024;
@@ -42,9 +49,9 @@ const EXPORT_STYLES = `:root {
   --paper: #F3EBDD;
   --ink: #28251F;
   --line: #CFC4B3;
-  --muted: #84796C;
+  --muted: #6A6056;
   --accent: #C95B43;
-  --muted-strong: #655B51;
+  --muted-strong: #594F46;
   --accent-strong: #A6402F;
   --page-width: 960px;
   --heading-font: "PT Serif", "Iowan Old Style", "Palatino Linotype", serif;
@@ -114,11 +121,11 @@ function withId(type, defaults, overrides = {}) {
 }
 
 function createHeading(overrides = {}) {
-  return withId('heading', { content: 'Новая мысль', level: 1 }, overrides);
+  return withId('heading', { content: 'Заголовок страницы', level: 1 }, overrides);
 }
 
 function createText(overrides = {}) {
-  return withId('text', { content: 'Напишите здесь несколько строк текста.' }, overrides);
+  return withId('text', { content: 'Добавьте текст блока.' }, overrides);
 }
 
 function createImage(overrides = {}) {
@@ -137,32 +144,32 @@ const blockFactories = Object.freeze({ heading: createHeading, text: createText,
 
 const templateFactories = Object.freeze({
   note: () => [
-    createHeading({ content: 'Место для вашей\nследующей истории' }),
-    createText({ content: 'Соберите страницу из небольших элементов. Здесь можно менять текст, добавлять изображения и находить свой ритм.' }),
+    createHeading({ content: 'Заголовок страницы' }),
+    createText({ content: 'Короткое описание страницы.' }),
     createDivider(),
-    createText({ content: 'Хорошая страница начинается с ясной мысли. Дайте ей достаточно воздуха и оставьте только то, что помогает рассказать историю.' }),
-    createImage({ caption: '01 — Подпись к изображению' }),
+    createText({ content: 'Основной текст страницы.' }),
+    createImage({ caption: 'Подпись к изображению' }),
   ],
   portfolio: () => [
     createHeading({ content: 'Избранные работы' }),
-    createText({ content: 'Короткий рассказ о том, как вы работаете и какие задачи любите решать.' }),
-    createImage({ caption: '01 — Проект и его контекст' }),
+    createText({ content: 'Короткое описание работ.' }),
+    createImage({ caption: 'Название проекта' }),
     createLink({ label: 'Посмотреть все проекты', url: 'https://example.com/portfolio' }),
     createDivider(),
   ],
   poster: () => [
-    createHeading({ content: 'Вечер\nтипографики' }),
-    createText({ content: '18 октября · 19:00\nМесто встречи укажем здесь' }),
+    createHeading({ content: 'Название события' }),
+    createText({ content: 'Дата · время\nМесто проведения' }),
     createImage({ alt: 'Постер события', caption: 'Программа и детали' }),
     createLink({ label: 'Зарегистрироваться', url: 'https://example.com/register' }),
   ],
   guide: () => [
     createHeading({ content: 'Мини-справочник' }),
-    createText({ content: 'Соберите здесь короткие инструкции, определения и полезные ссылки.' }),
+    createText({ content: 'Короткое описание справочника.' }),
     createDivider(),
-    createHeading({ content: '01 — Начните с главного', level: 2 }),
-    createText({ content: 'Один ясный абзац помогает читателю быстро найти нужный ответ.' }),
-    createLink({ label: 'Открыть дополнительный материал', url: 'https://example.com/guide' }),
+    createHeading({ content: 'Раздел', level: 2 }),
+    createText({ content: 'Текст раздела.' }),
+    createLink({ label: 'Дополнительный материал', url: 'https://example.com/guide' }),
   ],
 });
 
@@ -192,9 +199,24 @@ const state = {
   selectedBlockId: null,
 };
 
+const history = {
+  past: [],
+  future: [],
+  lastFieldKey: '',
+  lastFieldAt: 0,
+};
+
+let saveTimer = null;
+let dragState = null;
+
 let initialized = false;
 
 const dom = {
+  title: null,
+  status: null,
+  saveState: null,
+  undoButton: null,
+  redoButton: null,
   composition: null,
   list: null,
   editor: null,
@@ -221,6 +243,110 @@ function getBlock(id) {
 
 function getSelectedBlock() {
   return getBlock(state.selectedBlockId) || state.blocks[0] || null;
+}
+
+function projectSnapshot() {
+  return {
+    version: PROJECT_VERSION,
+    id: state.id,
+    title: state.title,
+    template: state.template,
+    selectedBlockId: state.selectedBlockId,
+    settings: { ...state.settings },
+    blocks: state.blocks.map((block) => ({ ...block })),
+  };
+}
+
+function applySnapshot(snapshot) {
+  Object.assign(state, {
+    id: snapshot.id,
+    title: snapshot.title,
+    template: snapshot.template,
+    selectedBlockId: snapshot.selectedBlockId,
+    settings: { ...snapshot.settings },
+    blocks: snapshot.blocks.map((block) => ({ ...block })),
+  });
+}
+
+function updateHistoryButtons() {
+  if (dom.undoButton) dom.undoButton.disabled = history.past.length === 0;
+  if (dom.redoButton) dom.redoButton.disabled = history.future.length === 0;
+}
+
+function rememberMutation(label, { fieldKey = '', force = false } = {}) {
+  const now = Date.now();
+  const canCoalesce = !force && fieldKey && history.lastFieldKey === fieldKey && now - history.lastFieldAt < 700;
+  if (!canCoalesce) history.past.push({ label, snapshot: projectSnapshot() });
+  if (history.past.length > MAX_HISTORY) history.past.shift();
+  history.future.length = 0;
+  history.lastFieldKey = fieldKey;
+  history.lastFieldAt = now;
+  updateHistoryButtons();
+}
+
+function commitMutation(label, mutator, options = {}) {
+  rememberMutation(label, options);
+  mutator();
+  markDirty();
+}
+
+function undo() {
+  const entry = history.past.pop();
+  if (!entry) return false;
+  history.future.push({ label: entry.label, snapshot: projectSnapshot() });
+  applySnapshot(entry.snapshot);
+  history.lastFieldKey = '';
+  renderAll();
+  markDirty();
+  setProjectStatus(`Отменено: ${entry.label}.`);
+  return true;
+}
+
+function redo() {
+  const entry = history.future.pop();
+  if (!entry) return false;
+  history.past.push({ label: entry.label, snapshot: projectSnapshot() });
+  applySnapshot(entry.snapshot);
+  history.lastFieldKey = '';
+  renderAll();
+  markDirty();
+  setProjectStatus(`Повторено: ${entry.label}.`);
+  return true;
+}
+
+function markDirty() {
+  if (dom.saveState) dom.saveState.textContent = '· есть изменения';
+  scheduleSave();
+  updateHistoryButtons();
+}
+
+function scheduleSave() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveToStorage, 350);
+}
+
+function saveToStorage() {
+  if (typeof localStorage === 'undefined') return false;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(projectSnapshot()));
+    if (dom.saveState) dom.saveState.textContent = '· сохранено локально';
+    return true;
+  } catch {
+    if (dom.saveState) dom.saveState.textContent = '· только в памяти';
+    return false;
+  }
+}
+
+function loadFromStorage() {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return normalizeImportedProject(JSON.parse(raw));
+  } catch {
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* storage may be unavailable */ }
+    return null;
+  }
 }
 
 function rememberFocus() {
@@ -274,6 +400,11 @@ function safeHref(value) {
   return href;
 }
 
+function safeLinkHref(value) {
+  const href = safeHref(value);
+  return /^data:/i.test(href) ? '' : href;
+}
+
 function textHtml(value, emptyLabel) {
   const text = String(value ?? '');
   if (!text.trim()) return `<span class="empty-hint">${escapeHtml(emptyLabel)}</span>`;
@@ -282,7 +413,6 @@ function textHtml(value, emptyLabel) {
 
 function renderPreview(project = state, { mount = true } = {}) {
   const blocks = Array.isArray(project?.blocks) ? project.blocks : [];
-  const template = TEMPLATE_LABELS[project?.template] || TEMPLATE_LABELS.note;
   const content = blocks.map((block) => {
     if (!block || !block.type) return '';
     if (block.type === 'heading') {
@@ -298,12 +428,12 @@ function renderPreview(project = state, { mount = true } = {}) {
       const alt = String(block.alt ?? '').trim();
       const caption = String(block.caption ?? '').trim();
       const media = src
-        ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy">`
+        ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy" data-image-block-id="${escapeHtml(block.id || '')}">`
         : `<div class="preview-image-placeholder" role="img" aria-label="Изображение не добавлено"><span class="placeholder-cross" aria-hidden="true">✳</span><span class="empty-hint">Добавьте изображение</span></div>`;
       return `<figure class="preview-block preview-image">${media}${caption ? `<figcaption class="page-caption">${textHtml(caption, '')}</figcaption>` : ''}</figure>`;
     }
     if (block.type === 'link') {
-      const href = safeHref(block.url);
+      const href = safeLinkHref(block.url);
       const label = textHtml(block.label, 'Добавьте текст ссылки');
       return href
         ? `<p class="preview-block preview-link"><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${label}</a></p>`
@@ -317,7 +447,6 @@ function renderPreview(project = state, { mount = true } = {}) {
     return '';
   }).join('');
   const html = `<article class="page-preview" tabindex="-1" data-template="${escapeHtml(project?.template || 'note')}">
-    <p class="page-overline">${escapeHtml(template)} · STATIC STUDIO</p>
     ${content || '<p class="preview-empty">Добавьте блок в редакторе, чтобы увидеть его здесь.</p>'}
   </article>`;
   if (mount && dom.previewMount) dom.previewMount.innerHTML = html;
@@ -326,34 +455,35 @@ function renderPreview(project = state, { mount = true } = {}) {
 }
 
 function setProjectStatus(message, isError = false) {
-  if (!dom.previewStatus) return;
-  dom.previewStatus.textContent = message;
-  dom.previewStatus.dataset.status = isError ? 'error' : 'success';
+  const target = dom.status || dom.previewStatus;
+  if (!target) return;
+  target.textContent = message;
+  target.dataset.status = isError ? 'error' : 'success';
+  target.setAttribute('role', isError ? 'alert' : 'status');
 }
 
 function projectPayload() {
-  return {
-    version: PROJECT_VERSION,
-    id: state.id,
-    title: state.title,
-    template: state.template,
-    selectedBlockId: state.selectedBlockId,
-    settings: { ...state.settings },
-    blocks: state.blocks.map((block) => ({ ...block })),
-  };
+  return projectSnapshot();
 }
 
 function exportProject() {
-  if (typeof Blob === 'undefined' || typeof URL === 'undefined') return false;
-  const blob = new Blob([JSON.stringify(projectPayload(), null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'static-studio-project.json';
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
-  setProjectStatus('Проект экспортирован в static-studio-project.json.');
-  return true;
+  try {
+    if (typeof Blob === 'undefined' || typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function' || typeof document === 'undefined') throw new Error('Браузер не поддерживает локальную загрузку файлов.');
+    const blob = new Blob([JSON.stringify(projectPayload(), null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'static-studio-project.json';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    setProjectStatus('Проект экспортирован в static-studio-project.json.');
+    return true;
+  } catch (error) {
+    setProjectStatus(`Не удалось экспортировать проект: ${error.message}`, true);
+    return false;
+  }
 }
 
 function asBytes(value) {
@@ -393,18 +523,33 @@ function zipEntries(files) {
   throw new TypeError('ZIP files must be an object, Map, or array.');
 }
 
+function validateZipName(name) {
+  const normalizedName = String(name ?? '');
+  const segments = normalizedName.split('/');
+  const nameBytes = new TextEncoder().encode(normalizedName);
+  if (!normalizedName
+    || normalizedName.startsWith('/')
+    || /^[a-zA-Z]:[\\/]/.test(normalizedName)
+    || /[\\\u0000-\u001F\u007F]/.test(normalizedName)
+    || segments.some((segment) => !segment || segment === '.' || segment === '..')
+    || nameBytes.length > MAX_ZIP_NAME_BYTES) {
+    throw new Error('ZIP entry has an unsafe or overly long name.');
+  }
+  return { name: normalizedName, nameBytes };
+}
+
 function buildZip(files) {
-  const entries = zipEntries(files).map(({ name, data }) => {
-    const normalizedName = String(name ?? '');
-    const segments = normalizedName.split('/');
-    if (!normalizedName
-      || normalizedName.startsWith('/')
-      || /^[a-zA-Z]:[\\/]/.test(normalizedName)
-      || /[\\\u0000-\u001F\u007F]/.test(normalizedName)
-      || segments.some((segment) => !segment || segment === '.' || segment === '..')) {
-      throw new Error('ZIP entry has an unsafe name.');
-    }
-    return { name: normalizedName, nameBytes: new TextEncoder().encode(normalizedName), data: asBytes(data) };
+  const rawEntries = zipEntries(files);
+  if (rawEntries.length > MAX_ZIP_ENTRIES) throw new Error('ZIP contains too many entries.');
+  const names = new Set();
+  const entries = rawEntries.map(({ name, data }) => {
+    const validated = validateZipName(name);
+    const key = validated.name.toLowerCase();
+    if (names.has(key)) throw new Error('ZIP contains duplicate entry names.');
+    names.add(key);
+    const bytes = asBytes(data);
+    if (bytes.length > MAX_ZIP_VALUE) throw new Error('ZIP entry is too large.');
+    return { ...validated, data: bytes };
   });
   const localParts = [];
   const centralParts = [];
@@ -448,9 +593,11 @@ function buildZip(files) {
     central.set(entry.nameBytes, 46);
     centralParts.push(central);
     offset += header.length + entry.data.length;
+    if (offset > MAX_ZIP_VALUE) throw new Error('ZIP archive is too large.');
   }
   const centralOffset = offset;
   const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+  if (centralSize > MAX_ZIP_VALUE || centralOffset + centralSize > MAX_ZIP_VALUE) throw new Error('ZIP archive is too large.');
   const eocd = new Uint8Array(22);
   const eocdView = new DataView(eocd.buffer);
   writeU32(eocdView, 0, 0x06054B50);
@@ -484,11 +631,23 @@ function safeAssetName(rawName, mime, index, usedNames) {
   const fallbackExtension = IMAGE_MIME_EXTENSIONS[mime] || 'bin';
   const original = String(rawName || '').split(/[\\/]/).pop().split('?')[0];
   const cleaned = original.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^[-.]+|[-.]+$/g, '');
-  const stem = (cleaned.replace(/\.[a-zA-Z0-9]{1,8}$/, '').replace(/[.]+$/g, '') || `image-${index + 1}`);
-  let candidate = `${stem}.${fallbackExtension}`;
+  let stem = (cleaned.replace(/\.[a-zA-Z0-9]{1,8}$/, '').replace(/[.]+$/g, '') || `image-${index + 1}`);
+  const reserved = new Set(['con', 'prn', 'aux', 'nul', 'clock$', 'com1', 'com2', 'com3', 'com4', 'com5', 'com6', 'com7', 'com8', 'com9', 'lpt1', 'lpt2', 'lpt3', 'lpt4', 'lpt5', 'lpt6', 'lpt7', 'lpt8', 'lpt9']);
+  if (reserved.has(stem.toLowerCase())) stem = `image-${stem}`;
+  const extension = `.${fallbackExtension}`;
+  const limit = 180 - new TextEncoder().encode(extension).length;
+  while (new TextEncoder().encode(stem).length > limit) stem = stem.slice(0, Math.max(1, stem.length - 8));
+  let candidate = `${stem}${extension}`;
   let serial = 2;
-  while (usedNames.has(candidate)) candidate = `${stem}-${serial++}.${fallbackExtension}`;
+  const hasName = (name) => usedNames.has(name) || usedNames.has(name.toLowerCase());
+  while (hasName(candidate)) {
+    const suffix = `-${serial++}`;
+    const stemLimit = 180 - new TextEncoder().encode(extension + suffix).length;
+    const compactStem = stem.slice(0, Math.max(1, stemLimit));
+    candidate = `${compactStem}${suffix}${extension}`;
+  }
   usedNames.add(candidate);
+  usedNames.add(candidate.toLowerCase());
   return candidate;
 }
 
@@ -529,7 +688,6 @@ function buildExportFiles(project = state) {
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="${escapeHtml(source.settings?.paper || DEFAULT_SETTINGS.paper)}">
     <title>${title}</title>
     <link rel="stylesheet" href="styles.css">
   </head>
@@ -551,9 +709,14 @@ function exportZip(project = state) {
     const link = document.createElement('a');
     link.href = url;
     link.download = 'static-studio-export.zip';
+    document.body.append(link);
     link.click();
+    link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 0);
-    setProjectStatus('Страница экспортирована в static-studio-export.zip.');
+    const hasExternalImages = (project.blocks || []).some((block) => block?.type === 'image' && block.src && !/^data:image\//i.test(block.src));
+    setProjectStatus(hasExternalImages
+      ? 'ZIP экспортирован. Внешние изображения останутся зависимыми от сети.'
+      : 'Страница экспортирована в static-studio-export.zip.');
     return blob;
   } catch (error) {
     setProjectStatus(`Не удалось экспортировать ZIP: ${error.message}`, true);
@@ -562,8 +725,8 @@ function exportZip(project = state) {
 }
 
 function normalizeImportedProject(input) {
-  if (input?.version !== undefined && input.version !== PROJECT_VERSION) throw new Error(`Неподдерживаемая версия проекта: ${input.version}.`);
-  if (!input || typeof input !== 'object' || !Array.isArray(input.blocks) || input.blocks.length > 100) throw new Error('Файл проекта должен содержать массив блоков.');
+  if (input?.version !== undefined && input.version !== 1 && input.version !== PROJECT_VERSION) throw new Error(`Неподдерживаемая версия проекта: ${input.version}.`);
+  if (!input || typeof input !== 'object' || !Array.isArray(input.blocks) || input.blocks.length > MAX_BLOCKS) throw new Error(`Файл проекта должен содержать не более ${MAX_BLOCKS} блоков.`);
   if (input.template !== undefined && (typeof input.template !== 'string' || !Object.hasOwn(templates, input.template))) throw new Error('Файл содержит неизвестный шаблон.');
   const template = input.template === undefined ? 'note' : input.template;
   const settingsInput = input.settings && typeof input.settings === 'object' ? input.settings : {};
@@ -591,16 +754,24 @@ function normalizeImportedProject(input) {
         safe[key] = raw[key];
       }
     }
+    if (safe.type === 'heading') safe.level = Math.min(3, Math.max(1, Number(safe.level) || 1));
+    if (safe.type === 'image' && safe.src) {
+      if (!safeHref(safe.src)) throw new Error('Файл содержит небезопасный или неподдерживаемый адрес изображения.');
+      if (/^data:/i.test(safe.src) && !parseImageDataUrl(safe.src)) throw new Error('Файл содержит неподдерживаемый формат изображения.');
+    }
+    if (safe.type === 'link' && safe.url && !safeLinkHref(safe.url)) throw new Error('Файл содержит небезопасный адрес ссылки.');
     return safe;
   });
   const selectedBlockId = typeof input.selectedBlockId === 'string' && usedIds.has(input.selectedBlockId) ? input.selectedBlockId : blocks[0]?.id || null;
-  return { id: typeof input.id === 'string' && input.id.length <= 120 ? input.id : createId('project'), title: typeof input.title === 'string' ? input.title.slice(0, MAX_TEXT_LENGTH) : 'Без названия', template, settings, blocks, selectedBlockId };
+  return { id: typeof input.id === 'string' && input.id.length <= 120 ? input.id : createId('project'), title: typeof input.title === 'string' ? input.title.slice(0, MAX_TITLE_LENGTH) : 'Без названия', template, settings, blocks, selectedBlockId };
 }
 
 function importProjectData(input) {
   const next = normalizeImportedProject(input);
+  rememberMutation('импорт проекта', { force: true });
   Object.assign(state, next, { selectedBlockId: next.selectedBlockId || next.blocks[0]?.id || null });
   renderAll();
+  markDirty();
   setProjectStatus('Проект импортирован.');
   return true;
 }
@@ -666,18 +837,18 @@ function fieldLabel(label, html) {
 }
 
 function inputField({ block, field, label, value, type = 'text', placeholder = '' }) {
-  const input = `<input class="text-control editor-field" data-block-id="${escapeHtml(block.id)}" data-field="${escapeHtml(field)}" data-focus-key="${escapeHtml(`${block.id}:${field}`)}" type="${type}" value="${escapeHtml(value)}"${placeholder ? ` placeholder="${escapeHtml(placeholder)}"` : ''}>`;
+  const input = `<input class="text-control editor-field" name="block-${escapeHtml(block.id)}-${escapeHtml(field)}" data-block-id="${escapeHtml(block.id)}" data-field="${escapeHtml(field)}" data-focus-key="${escapeHtml(`${block.id}:${field}`)}" type="${type}" value="${escapeHtml(value)}"${placeholder ? ` placeholder="${escapeHtml(placeholder)}"` : ''}>`;
   return fieldLabel(label, input);
 }
 
 function textareaField({ block, field, label, value, placeholder = '' }) {
-  const textarea = `<textarea class="text-control editor-field" data-block-id="${escapeHtml(block.id)}" data-field="${escapeHtml(field)}" data-focus-key="${escapeHtml(`${block.id}:${field}`)}" rows="4"${placeholder ? ` placeholder="${escapeHtml(placeholder)}"` : ''}>${escapeHtml(value)}</textarea>`;
+  const textarea = `<textarea class="text-control editor-field" name="block-${escapeHtml(block.id)}-${escapeHtml(field)}" data-block-id="${escapeHtml(block.id)}" data-field="${escapeHtml(field)}" data-focus-key="${escapeHtml(`${block.id}:${field}`)}" rows="4"${placeholder ? ` placeholder="${escapeHtml(placeholder)}"` : ''}>${escapeHtml(value)}</textarea>`;
   return fieldLabel(label, textarea);
 }
 
 function selectField({ block, field, label, value, options }) {
   const optionsHtml = options.map(([optionValue, optionLabel]) => `<option value="${escapeHtml(optionValue)}"${optionValue === value ? ' selected' : ''}>${escapeHtml(optionLabel)}</option>`).join('');
-  const select = `<select class="select-control editor-field" data-block-id="${escapeHtml(block.id)}" data-field="${escapeHtml(field)}" data-focus-key="${escapeHtml(`${block.id}:${field}`)}">${optionsHtml}</select>`;
+  const select = `<select class="select-control editor-field" name="block-${escapeHtml(block.id)}-${escapeHtml(field)}" data-block-id="${escapeHtml(block.id)}" data-field="${escapeHtml(field)}" data-focus-key="${escapeHtml(`${block.id}:${field}`)}">${optionsHtml}</select>`;
   return fieldLabel(label, select);
 }
 
@@ -699,8 +870,8 @@ function renderBlockList() {
     const selected = block.id === state.selectedBlockId;
     const typeLabel = BLOCK_LABELS[block.type] || block.type;
     const title = block.type === 'heading' || block.type === 'text' ? String(block.content ?? '').split('\n')[0] : typeLabel;
-    return `<li class="block-item${selected ? ' is-selected' : ''}" data-block-id="${escapeHtml(block.id)}" draggable="true" tabindex="0" aria-selected="${selected}">
-      <button class="block-select" type="button" data-action="select" data-block-id="${escapeHtml(block.id)}" data-focus-key="row:${escapeHtml(block.id)}" aria-current="${selected ? 'true' : 'false'}">
+    return `<li class="block-item${selected ? ' is-selected' : ''}" data-block-id="${escapeHtml(block.id)}" draggable="true" role="option" aria-selected="${selected}">
+      <button class="block-select" type="button" data-action="select" data-block-id="${escapeHtml(block.id)}" data-focus-key="row:${escapeHtml(block.id)}" aria-selected="${selected}" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown">
         <span class="block-grip" aria-hidden="true">⠿</span><span class="block-number">${String(index + 1).padStart(2, '0')}</span><span class="block-name">${escapeHtml(typeLabel)}</span><span class="block-summary">${escapeHtml(title)}</span>
       </button>
       <div class="block-actions" aria-label="Действия блока">
@@ -728,6 +899,7 @@ function renderBlockEditor() {
     html += textareaField({ block, field: 'content', label: 'Текст', value: block.content, placeholder: 'Введите текст блока' });
   } else if (block.type === 'image') {
     html += `<button class="button button-quiet image-upload-button" type="button" data-action="upload-image" data-block-id="${escapeHtml(block.id)}">Загрузить изображение</button>`;
+    if (block.src) html += `<button class="button button-quiet image-clear-button" type="button" data-action="clear-image" data-block-id="${escapeHtml(block.id)}">Убрать изображение</button>`;
     html += inputField({ block, field: 'src', label: 'Адрес изображения', value: block.src, type: 'url', placeholder: 'https://…' });
     html += inputField({ block, field: 'name', label: 'Имя файла', value: block.name || '', placeholder: 'Необязательно' });
     html += inputField({ block, field: 'alt', label: 'Описание', value: block.alt, placeholder: 'Что изображено' });
@@ -744,11 +916,13 @@ function renderBlockEditor() {
 function renderAll(options = {}) {
   const focus = options.focus || rememberFocus();
   if (!state.selectedBlockId || !getBlock(state.selectedBlockId)) state.selectedBlockId = state.blocks[0]?.id || null;
+  if (dom.title && document.activeElement !== dom.title) dom.title.value = state.title || '';
   renderComposition();
   renderBlockList();
   renderBlockEditor();
   renderSettings();
   renderPreview(state);
+  updateHistoryButtons();
   restoreFocus(focus);
 }
 
@@ -757,34 +931,49 @@ function moveBlock(id, direction) {
   if (index < 0) return false;
   const targetIndex = direction === 'up' ? index - 1 : index + 1;
   if (targetIndex < 0 || targetIndex >= state.blocks.length) return false;
-  [state.blocks[index], state.blocks[targetIndex]] = [state.blocks[targetIndex], state.blocks[index]];
+  commitMutation('перемещение блока', () => {
+    [state.blocks[index], state.blocks[targetIndex]] = [state.blocks[targetIndex], state.blocks[index]];
+  }, { force: true });
   state.selectedBlockId = id;
   renderAll({ focus: { focusKey: `row:${id}`, start: null, end: null } });
+  setProjectStatus(`Блок перемещён на позицию ${targetIndex + 1}.`);
   return true;
 }
 
 function replaceTemplate(templateId) {
   if (!templates[templateId]) return;
-  state.template = templateId;
-  state.blocks = cloneBlocks(templateId);
-  state.selectedBlockId = state.blocks[0]?.id || null;
+  if (templateId === state.template) return;
+  commitMutation('смена композиции', () => {
+    state.template = templateId;
+    state.blocks = cloneBlocks(templateId);
+    state.selectedBlockId = state.blocks[0]?.id || null;
+  }, { force: true });
   renderAll();
+  setProjectStatus(`Композиция «${TEMPLATE_LABELS[templateId]}» применена. Можно отменить.`);
 }
 
 function addBlock(type) {
+  if (state.blocks.length >= MAX_BLOCKS) {
+    setProjectStatus(`Нельзя добавить больше ${MAX_BLOCKS} блоков.`, true);
+    return;
+  }
   const factory = blockFactories[type] || createText;
   const block = factory();
-  state.blocks.push(block);
+  commitMutation('добавление блока', () => state.blocks.push(block), { force: true });
   state.selectedBlockId = block.id;
   renderAll({ focus: { focusKey: `${block.id}:${Object.keys(block).find((key) => key !== 'id' && key !== 'type') || 'content'}`, start: null, end: null } });
 }
 
 function duplicateBlock(id) {
+  if (state.blocks.length >= MAX_BLOCKS) {
+    setProjectStatus(`Нельзя добавить больше ${MAX_BLOCKS} блоков.`, true);
+    return;
+  }
   const index = state.blocks.findIndex((block) => block.id === id);
   if (index < 0) return;
   const original = state.blocks[index];
   const copy = { ...original, id: createId(original.type) };
-  state.blocks.splice(index + 1, 0, copy);
+  commitMutation('дублирование блока', () => state.blocks.splice(index + 1, 0, copy), { force: true });
   state.selectedBlockId = copy.id;
   renderAll({ focus: { focusKey: `row:${copy.id}`, start: null, end: null } });
 }
@@ -792,16 +981,32 @@ function duplicateBlock(id) {
 function deleteBlock(id) {
   const index = state.blocks.findIndex((block) => block.id === id);
   if (index < 0) return;
-  state.blocks.splice(index, 1);
+  commitMutation('удаление блока', () => state.blocks.splice(index, 1), { force: true });
   state.selectedBlockId = state.blocks[Math.min(index, state.blocks.length - 1)]?.id || null;
   renderAll();
+  setProjectStatus('Блок удалён. Можно отменить.');
 }
 
 function updateBlockField(blockId, field, value) {
   const block = getBlock(blockId);
   if (!block || !(field in block)) return;
-  block[field] = field === 'level' ? Number(value) || 1 : value;
-  renderAll({ focus: { focusKey: `${blockId}:${field}`, start: document.activeElement?.selectionStart ?? null, end: document.activeElement?.selectionEnd ?? null } });
+  const nextValue = field === 'level' ? Math.min(3, Math.max(1, Number(value) || 1)) : String(value ?? '').slice(0, field === 'content' ? MAX_TEXT_LENGTH : MAX_IMAGE_DATA_URL_LENGTH);
+  if (block[field] === nextValue) return;
+  const fieldKey = `${blockId}:${field}`;
+  rememberMutation('редактирование блока', { fieldKey });
+  block[field] = nextValue;
+  updateBlockSummary(blockId);
+  renderPreview(state);
+  markDirty();
+}
+
+function updateBlockSummary(blockId) {
+  const row = dom.list ? Array.from(dom.list.querySelectorAll('[data-block-id]')).find((item) => item.dataset.blockId === blockId) : null;
+  const block = getBlock(blockId);
+  const summary = row?.querySelector('.block-summary');
+  if (summary && block) summary.textContent = block.type === 'heading' || block.type === 'text'
+    ? String(block.content || '').split('\n')[0]
+    : BLOCK_LABELS[block.type] || block.type;
 }
 
 function handleClick(event) {
@@ -829,28 +1034,50 @@ function handleFieldInput(event) {
   updateBlockField(target.dataset.blockId, target.dataset.field, target.value);
 }
 
+function handleTitleInput(event) {
+  if (!dom.title || event.target !== dom.title) return;
+  const nextTitle = String(event.target.value || '').slice(0, MAX_TITLE_LENGTH);
+  if (nextTitle === state.title) return;
+  rememberMutation('изменение названия', { fieldKey: 'project:title' });
+  state.title = nextTitle || 'Без названия';
+  markDirty();
+}
+
 function updateSetting(field, value) {
   if (!state.settings || !(field in state.settings)) return;
+  const previous = state.settings[field];
+  const fieldKey = `setting:${field}`;
   if (field === 'width') {
     const parsed = Number(value);
     if (!Number.isFinite(parsed)) return;
-    state.settings.width = Math.min(1440, Math.max(480, Math.round(parsed)));
+    const next = Math.min(1440, Math.max(480, Math.round(parsed)));
+    if (next === previous) return;
+    rememberMutation(`изменение настройки «${field}»`, { fieldKey });
+    state.settings.width = next;
   } else if (['paper', 'ink', 'accent'].includes(field)) {
     if (!/^#[0-9a-f]{6}$/i.test(value)) return;
+    if (String(value).toUpperCase() === previous) return;
+    rememberMutation(`изменение настройки «${field}»`, { fieldKey });
     state.settings[field] = value.toUpperCase();
   } else if (['headingFont', 'bodyFont'].includes(field) && FONT_STACKS[value]) {
+    if (value === previous) return;
+    rememberMutation(`изменение настройки «${field}»`, { fieldKey });
     state.settings[field] = value;
   }
   applySettings();
-  syncSettingControls({ preserveActive: false });
+  syncSettingControls({ preserveActive: true });
   renderPreview(state);
+  markDirty();
 }
 
 function handleSettingChange(event) {
   const target = event.target.closest('[data-setting]');
   if (!target || !dom.settingsMount.contains(target)) return;
-  // Let number inputs be edited naturally; commit their clamped value on change/blur.
-  if (target.dataset.setting === 'width' && event.type === 'input') return;
+  if (target.dataset.setting === 'width' && event.type === 'input') {
+    const parsed = Number(target.value);
+    if (Number.isFinite(parsed) && parsed >= 480 && parsed <= 1440) updateSetting('width', parsed);
+    return;
+  }
   if (target.dataset.setting === 'widthPreset') {
     if (target.value) updateSetting('width', target.value);
     return;
@@ -892,6 +1119,16 @@ function handleGlobalClick(event) {
       if (dom.imageFile) dom.imageFile.dataset.blockId = block.id;
       dom.imageFile?.click();
     }
+  } else if (action === 'clear-image') {
+    const block = getBlock(event.target.closest('[data-block-id]')?.dataset.blockId);
+    if (block?.type === 'image') {
+      rememberMutation('удаление изображения', { force: true });
+      block.src = '';
+      block.name = '';
+      renderAll({ focus: { focusKey: `${block.id}:src`, start: null, end: null } });
+      markDirty();
+      setProjectStatus('Изображение убрано. Можно отменить.');
+    }
   }
 }
 
@@ -900,19 +1137,37 @@ function handleImageFile(event) {
   const block = getBlock(event.target.dataset.blockId) || getSelectedBlock();
   event.target.value = '';
   if (!file || !block || block.type !== 'image') return;
-  if (!file.type.startsWith('image/')) return setProjectStatus('Не удалось загрузить файл: выберите изображение.', true);
+  if (!Object.hasOwn(IMAGE_MIME_EXTENSIONS, file.type)) return setProjectStatus('Не удалось загрузить файл: выберите PNG, JPEG, GIF, SVG, WebP или AVIF.', true);
   if (file.size > MAX_IMAGE_SIZE) return setProjectStatus('Изображение слишком большое. Максимальный размер — 10 МБ.', true);
   const reader = new FileReader();
   reader.onerror = () => setProjectStatus('Не удалось прочитать изображение.', true);
   reader.onload = () => {
+    if (getBlock(block.id) !== block) {
+      setProjectStatus('Изображение не добавлено: блок уже изменён.', true);
+      return;
+    }
+    rememberMutation('добавление изображения', { force: true });
     block.src = String(reader.result || '');
     block.name = file.name;
     if (!block.alt) block.alt = file.name.replace(/\.[^.]+$/, '');
     state.selectedBlockId = block.id;
     renderAll();
+    markDirty();
     setProjectStatus(`Изображение «${file.name}» добавлено.`);
   };
   reader.readAsDataURL(file);
+}
+
+function handlePreviewImageError(event) {
+  const image = event.target.closest?.('img[data-image-block-id]');
+  if (!image || !dom.previewMount?.contains(image)) return;
+  const placeholder = document.createElement('div');
+  placeholder.className = 'preview-image-placeholder is-error';
+  placeholder.setAttribute('role', 'img');
+  placeholder.setAttribute('aria-label', 'Изображение не загрузилось');
+  placeholder.innerHTML = '<span class="placeholder-cross" aria-hidden="true">!</span><span class="empty-hint">Изображение не загрузилось</span>';
+  image.replaceWith(placeholder);
+  setProjectStatus('Изображение не загрузилось. Проверьте адрес или загрузите файл с устройства.', true);
 }
 
 function handleProjectFile(event) {
@@ -943,11 +1198,36 @@ function handleKeydown(event) {
   moveBlock(row.dataset.blockId, event.key === 'ArrowUp' ? 'up' : 'down');
 }
 
+function handleGlobalKeydown(event) {
+  if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+  const key = event.key.toLowerCase();
+  const editable = event.target.matches?.('input, textarea, select, [contenteditable="true"]');
+  if (editable) return;
+  if (key === 'z') {
+    event.preventDefault();
+    if (event.shiftKey) redo(); else undo();
+  } else if (key === 'y') {
+    event.preventDefault();
+    redo();
+  }
+}
+
 function handleDragStart(event) {
   const row = event.target.closest('[data-block-id]');
   if (!row || !dom.list.contains(row) || !event.dataTransfer) return;
+  dragState = { id: row.dataset.blockId };
+  row.classList.add('is-dragging');
   event.dataTransfer.effectAllowed = 'move';
   event.dataTransfer.setData('text/plain', row.dataset.blockId);
+}
+
+function clearDragState() {
+  dom.list?.querySelectorAll('.is-dragging, .drop-target').forEach((row) => row.classList.remove('is-dragging', 'drop-target'));
+  dragState = null;
+}
+
+function handleDragEnd() {
+  clearDragState();
 }
 
 function handleDrop(event) {
@@ -957,16 +1237,28 @@ function handleDrop(event) {
   const fromId = event.dataTransfer.getData('text/plain');
   const fromIndex = state.blocks.findIndex((block) => block.id === fromId);
   const toIndex = state.blocks.findIndex((block) => block.id === row.dataset.blockId);
-  if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+  if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) {
+    clearDragState();
+    return;
+  }
+  rememberMutation('перемещение блока', { force: true });
   const [moved] = state.blocks.splice(fromIndex, 1);
   // Removing an earlier item shifts the later drop target one slot left.
   const insertIndex = fromIndex < toIndex ? toIndex - 1 : toIndex;
   state.blocks.splice(insertIndex, 0, moved);
   state.selectedBlockId = moved.id;
+  markDirty();
   renderAll({ focus: { focusKey: `row:${moved.id}`, start: null, end: null } });
+  clearDragState();
+  setProjectStatus(`Блок перемещён на позицию ${insertIndex + 1}.`);
 }
 
 function bindDom() {
+  dom.title = document.querySelector('#project-title');
+  dom.status = document.querySelector('#project-status');
+  dom.saveState = document.querySelector('#save-state');
+  dom.undoButton = document.querySelector('#undo-button');
+  dom.redoButton = document.querySelector('#redo-button');
   dom.composition = document.querySelector('#composition-select');
   dom.list = document.querySelector('#block-list');
   dom.editor = document.querySelector('#block-editor');
@@ -981,6 +1273,9 @@ function bindDom() {
   dom.exportButton = document.querySelector('#export-project');
   dom.zipExportButton = document.querySelector('#export-zip');
   dom.importButton = document.querySelector('#import-project');
+  dom.title?.addEventListener('input', handleTitleInput);
+  dom.undoButton?.addEventListener('click', undo);
+  dom.redoButton?.addEventListener('click', redo);
   document.querySelectorAll('[data-preview-mode]').forEach((button) => button.addEventListener('click', () => setPreviewViewport(button.dataset.previewMode)));
 
   if (dom.addButton && !dom.addType) {
@@ -997,8 +1292,15 @@ function bindDom() {
   dom.list?.addEventListener('click', handleClick);
   dom.list?.addEventListener('keydown', handleKeydown);
   dom.list?.addEventListener('dragstart', handleDragStart);
-  dom.list?.addEventListener('dragover', (event) => { if (event.target.closest('[data-block-id]')) event.preventDefault(); });
+  dom.list?.addEventListener('dragover', (event) => {
+    const row = event.target.closest('[data-block-id]');
+    if (!row || !dragState || row.dataset.blockId === dragState.id) return;
+    event.preventDefault();
+    dom.list.querySelectorAll('.drop-target').forEach((item) => item.classList.remove('drop-target'));
+    row.classList.add('drop-target');
+  });
   dom.list?.addEventListener('drop', handleDrop);
+  dom.list?.addEventListener('dragend', handleDragEnd);
   dom.editor?.addEventListener('input', handleFieldInput);
   dom.editor?.addEventListener('change', handleFieldInput);
   dom.settingsMount?.addEventListener('input', handleSettingChange);
@@ -1009,14 +1311,19 @@ function bindDom() {
   dom.zipExportButton?.addEventListener('click', () => exportZip(state));
   dom.importButton?.addEventListener('click', () => dom.projectFile?.click());
   document.addEventListener('click', handleGlobalClick);
+  document.addEventListener('keydown', handleGlobalKeydown);
+  dom.previewMount?.addEventListener('error', handlePreviewImageError, true);
 }
 
 function init() {
   if (typeof document === 'undefined' || initialized) return;
   initialized = true;
   bindDom();
-  state.selectedBlockId = state.blocks[0]?.id || null;
+  const restored = loadFromStorage();
+  if (restored) Object.assign(state, restored);
+  state.selectedBlockId = state.selectedBlockId || state.blocks[0]?.id || null;
   renderAll();
+  setProjectStatus(restored ? 'Проект восстановлен из локального сохранения.' : 'Проект готов к редактированию.');
 }
 
 if (typeof document !== 'undefined') {
@@ -1038,6 +1345,10 @@ if (typeof window !== 'undefined') {
     templates,
     createDefaultProject,
     state,
+    safeHref,
+    safeLinkHref,
+    normalizeImportedProject,
+    safeAssetName,
     renderPreview,
     exportProject,
     crc32,
@@ -1047,6 +1358,8 @@ if (typeof window !== 'undefined') {
     importProjectData,
     renderAll,
     moveBlock,
+    undo,
+    redo,
     setPreviewViewport,
     init,
   });

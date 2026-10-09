@@ -1,0 +1,7 @@
+{
+  "name": "static-studio",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/static-studio.test.js"
+  }
+}

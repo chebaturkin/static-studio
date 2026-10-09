@@ -3,8 +3,6 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#F3EBDD">
-    <meta name="description" content="Static Studio — типографская мастерская для небольших статичных страниц.">
     <title>Static Studio</title>
     <link rel="stylesheet" href="styles.css">
   </head>
@@ -17,14 +15,27 @@
           </svg>
           <span class="brand-name">Static Studio</span>
         </a>
-        <div class="project-name" aria-label="Текущий проект">Без названия <span class="save-state">· локально</span></div>
+        <div class="project-name project-identity" aria-label="Текущий проект">
+          <label class="visually-hidden" for="project-title">Название проекта</label>
+          <input class="project-title" id="project-title" name="title" type="text" value="Без названия" maxlength="120" autocomplete="off" spellcheck="false">
+          <span class="save-state" id="save-state">· локально</span>
+          <span class="project-status" id="project-status" role="status" aria-live="polite" aria-atomic="true">Готово.</span>
+        </div>
         <nav class="topbar-actions" aria-label="Действия с проектом">
+          <div class="history-actions" role="group" aria-label="История изменений">
+            <button class="button button-quiet history-button" id="undo-button" type="button" aria-label="Отменить последнее действие (Control или Command + Z)" aria-keyshortcuts="Control+Z Meta+Z" disabled>
+              <span>Отменить</span><kbd aria-hidden="true">⌘Z</kbd>
+            </button>
+            <button class="button button-quiet history-button" id="redo-button" type="button" aria-label="Повторить отменённое действие (Control или Command + Shift + Z)" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z" disabled>
+              <span>Повторить</span><kbd aria-hidden="true">⇧⌘Z</kbd>
+            </button>
+          </div>
           <button class="button button-quiet mobile-preview-toggle" id="mobile-preview-toggle" type="button" data-action="toggle-preview" aria-pressed="false">Предпросмотр</button>
           <button class="button button-quiet" id="import-project" type="button">Импорт проекта</button>
           <button class="button button-quiet" id="export-project" type="button">Экспорт JSON</button>
           <button class="button button-accent" id="export-zip" type="button">Экспорт ZIP</button>
-          <input class="visually-hidden" id="project-file" type="file" accept="application/json,.json" tabindex="-1">
-          <input class="visually-hidden" id="image-file" type="file" accept="image/*" tabindex="-1">
+          <input class="visually-hidden" id="project-file" type="file" accept="application/json,.json" tabindex="-1" aria-hidden="true">
+          <input class="visually-hidden" id="image-file" type="file" accept="image/avif,image/gif,image/jpeg,image/png,image/svg+xml,image/webp" tabindex="-1" aria-hidden="true">
         </nav>
       </header>
 
@@ -61,30 +72,8 @@
                 <button class="icon-button add-block" id="add-block" type="button" aria-label="Добавить блок">+</button>
               </div>
             </div>
-            <ol class="block-list" id="block-list" aria-label="Порядок блоков">
-              <li class="block-item is-selected" data-block-id="heading">
-                <button class="block-select" type="button" aria-current="true">
-                  <span class="block-grip" aria-hidden="true">⠿</span><span class="block-number">01</span><span class="block-name">Заголовок</span>
-                </button>
-                <button class="block-remove" type="button" aria-label="Удалить блок «Заголовок»">×</button>
-              </li>
-              <li class="block-item" data-block-id="text">
-                <button class="block-select" type="button">
-                  <span class="block-grip" aria-hidden="true">⠿</span><span class="block-number">02</span><span class="block-name">Текст</span>
-                </button>
-                <button class="block-remove" type="button" aria-label="Удалить блок «Текст»">×</button>
-              </li>
-              <li class="block-item" data-block-id="image">
-                <button class="block-select" type="button">
-                  <span class="block-grip" aria-hidden="true">⠿</span><span class="block-number">03</span><span class="block-name">Изображение</span>
-                </button>
-                <button class="block-remove" type="button" aria-label="Удалить блок «Изображение»">×</button>
-              </li>
-            </ol>
-            <div class="block-editor" id="block-editor" aria-label="Настройки выбранного блока">
-              <label class="field-label" for="block-content">Содержание</label>
-              <textarea class="text-control" id="block-content" rows="3" placeholder="Введите текст блока"></textarea>
-            </div>
+            <ol class="block-list" id="block-list" role="listbox" aria-label="Порядок блоков"></ol>
+            <div class="block-editor" id="block-editor" aria-label="Настройки выбранного блока"></div>
           </section>
 
           <section class="rail-section settings-section" aria-labelledby="settings-title">
@@ -107,12 +96,11 @@
         <section class="preview-area" aria-labelledby="preview-title">
           <div class="preview-toolbar">
             <div>
-              <span class="preview-kicker">ПОЛОТНО · 01</span>
               <h1 id="preview-title">Предпросмотр</h1>
             </div>
             <div class="preview-controls" role="group" aria-label="Размер предпросмотра">
-              <button class="view-button is-active" type="button" data-preview-mode="desktop" aria-pressed="true" aria-label="Просмотр на компьютере">⌗</button>
-              <button class="view-button" type="button" data-preview-mode="mobile" aria-pressed="false" aria-label="Просмотр на телефоне">▯</button>
+              <button class="view-button is-active" type="button" data-preview-mode="desktop" aria-pressed="true" aria-label="Просмотр на компьютере" title="Компьютер">⌗</button>
+              <button class="view-button" type="button" data-preview-mode="mobile" aria-pressed="false" aria-label="Просмотр на телефоне" title="Телефон">▯</button>
             </div>
           </div>
           <p class="visually-hidden" id="preview-status" aria-live="polite">Предпросмотр готов.</p>

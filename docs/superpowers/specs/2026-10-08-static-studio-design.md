@@ -7,7 +7,7 @@ A small typography workshop for turning text, images, and links into a single po
 - Paper: `#F3EBDD`
 - Ink: `#28251F`
 - Rule: `#CFC4B3`
-- Muted: `#84796C`
+- Muted: `#6A6056`
 - Accent: `#C95B43`
 - Heading stack: `PT Serif, Iowan Old Style, Palatino Linotype, serif`
 - UI stack: `IBM Plex Mono, SFMono-Regular, monospace`
