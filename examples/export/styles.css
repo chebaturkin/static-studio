@@ -36,3 +36,14 @@ main { min-height: 100vh; padding: clamp(24px, 6vw, 72px); }
 .preview-space { height: 42px; }
 .preview-empty { margin-top: 35px; color: var(--muted-strong); font-family: var(--body-font); }
 .empty-hint { color: var(--muted-strong); font-style: italic; }
+
+::selection { color: var(--paper); background: var(--accent-strong); }
+.page-preview { box-shadow: 0 18px 36px rgba(40,37,31,.05); }
+.preview-link a { text-decoration-thickness: 1px; }
+@media (prefers-reduced-motion: no-preference) {
+  .page-preview { animation: appear .5s ease both; }
+  @keyframes appear { from { opacity: .2; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

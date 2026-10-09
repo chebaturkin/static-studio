@@ -3,55 +3,57 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Static Studio</title>
+    <title>Static Studio — локальная мастерская</title>
+    <meta name="description" content="Static Studio — локальная мастерская для текстов, изображений и ссылок.">
+    <meta name="theme-color" content="#F3EBDD">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <div class="studio-shell">
-      <header class="topbar" aria-label="Панель проекта">
+      <header class="topbar" aria-label="панель проекта">
         <a class="brand" href="#main" aria-label="Static Studio — к началу">
           <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
             <path d="M4 4h24v24H4zM4 12h24M12 4v24M20 12v16" />
           </svg>
           <span class="brand-name">Static Studio</span>
         </a>
-        <div class="project-name project-identity" aria-label="Текущий проект">
-          <label class="visually-hidden" for="project-title">Название проекта</label>
-          <input class="project-title" id="project-title" name="title" type="text" value="Без названия" maxlength="120" autocomplete="off" spellcheck="false">
+        <div class="project-name project-identity" aria-label="текущий проект">
+          <label class="visually-hidden" for="project-title">название проекта</label>
+          <input class="project-title" id="project-title" name="title" type="text" value="без названия" maxlength="120" autocomplete="off" spellcheck="false">
           <span class="save-state" id="save-state">· локально</span>
-          <span class="project-status" id="project-status" role="status" aria-live="polite" aria-atomic="true">Готово.</span>
+          <span class="project-status" id="project-status" role="status" aria-live="polite" aria-atomic="true">готово.</span>
         </div>
-        <nav class="topbar-actions" aria-label="Действия с проектом">
-          <div class="history-actions" role="group" aria-label="История изменений">
-            <button class="button button-quiet history-button" id="undo-button" type="button" aria-label="Отменить последнее действие (Control или Command + Z)" aria-keyshortcuts="Control+Z Meta+Z" disabled>
-              <span>Отменить</span><kbd aria-hidden="true">⌘Z</kbd>
+        <nav class="topbar-actions" aria-label="действия с проектом">
+          <div class="history-actions" role="group" aria-label="история изменений">
+            <button class="button button-quiet history-button" id="undo-button" type="button" aria-label="отменить последнее действие (Control или Command + Z)" aria-keyshortcuts="Control+Z Meta+Z" disabled>
+              <span>отменить</span><kbd aria-hidden="true">⌘Z</kbd>
             </button>
-            <button class="button button-quiet history-button" id="redo-button" type="button" aria-label="Повторить отменённое действие (Control или Command + Shift + Z)" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z" disabled>
-              <span>Повторить</span><kbd aria-hidden="true">⇧⌘Z</kbd>
+            <button class="button button-quiet history-button" id="redo-button" type="button" aria-label="повторить отменённое действие (Control или Command + Shift + Z)" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z" disabled>
+              <span>повторить</span><kbd aria-hidden="true">⇧⌘Z</kbd>
             </button>
           </div>
-          <button class="button button-quiet mobile-preview-toggle" id="mobile-preview-toggle" type="button" data-action="toggle-preview" aria-pressed="false">Предпросмотр</button>
-          <button class="button button-quiet" id="import-project" type="button">Импорт проекта</button>
-          <button class="button button-quiet" id="export-project" type="button">Экспорт JSON</button>
-          <button class="button button-accent" id="export-zip" type="button">Экспорт ZIP</button>
+          <button class="button button-quiet mobile-preview-toggle" id="mobile-preview-toggle" type="button" data-action="toggle-preview" aria-pressed="false">предпросмотр</button>
+          <button class="button button-quiet" id="import-project" type="button">импортировать проект</button>
+          <button class="button button-quiet" id="export-project" type="button">экспортировать JSON</button>
+          <button class="button button-accent" id="export-zip" type="button">экспортировать ZIP</button>
           <input class="visually-hidden" id="project-file" type="file" accept="application/json,.json" tabindex="-1" aria-hidden="true">
           <input class="visually-hidden" id="image-file" type="file" accept="image/avif,image/gif,image/jpeg,image/png,image/svg+xml,image/webp" tabindex="-1" aria-hidden="true">
         </nav>
       </header>
 
       <main class="workspace" id="main">
-        <aside class="editor-rail" aria-label="Редактор страницы">
+        <aside class="editor-rail" aria-label="редактор страницы">
           <section class="rail-section composition-section" aria-labelledby="composition-title">
             <div class="section-heading">
               <span class="section-index">01</span>
-              <h2 id="composition-title">Композиция</h2>
+              <h2 id="composition-title">композиция</h2>
             </div>
-            <label class="field-label" for="composition-select">Основа страницы</label>
+            <label class="field-label" for="composition-select">основа страницы</label>
             <select class="select-control" id="composition-select" name="composition">
-              <option value="note">Заметка</option>
-              <option value="portfolio">Портфолио</option>
-              <option value="poster">Афиша</option>
-              <option value="guide">Мини-справочник</option>
+              <option value="note">заметка</option>
+              <option value="portfolio">портфолио</option>
+              <option value="poster">афиша</option>
+              <option value="guide">мини-справочник</option>
             </select>
           </section>
 
@@ -59,54 +61,54 @@
             <div class="section-heading section-heading-spread">
               <div class="heading-label">
                 <span class="section-index">02</span>
-                <h2 id="blocks-title">Блоки страницы</h2>
+                <h2 id="blocks-title">блоки страницы</h2>
               </div>
               <div class="add-block-controls">
-                <select class="select-control add-block-type" id="add-block-type" aria-label="Тип нового блока">
-                  <option value="heading">Заголовок</option>
-                  <option value="text">Текст</option>
-                  <option value="image">Изображение</option>
-                  <option value="link">Ссылка</option>
-                  <option value="divider">Разделитель</option>
+                <select class="select-control add-block-type" id="add-block-type" aria-label="тип нового блока">
+                  <option value="heading">заголовок</option>
+                  <option value="text">текст</option>
+                  <option value="image">изображение</option>
+                  <option value="link">ссылка</option>
+                  <option value="divider">разделитель</option>
                 </select>
-                <button class="icon-button add-block" id="add-block" type="button" aria-label="Добавить блок">+</button>
+                <button class="icon-button add-block" id="add-block" type="button" aria-label="добавить блок">+</button>
               </div>
             </div>
-            <ol class="block-list" id="block-list" role="listbox" aria-label="Порядок блоков"></ol>
-            <div class="block-editor" id="block-editor" aria-label="Настройки выбранного блока"></div>
+            <ol class="block-list" id="block-list" role="listbox" aria-label="порядок блоков"></ol>
+            <div class="block-editor" id="block-editor" aria-label="настройки выбранного блока"></div>
           </section>
 
           <section class="rail-section settings-section" aria-labelledby="settings-title">
             <div class="section-heading">
               <span class="section-index">03</span>
-              <h2 id="settings-title">Вид страницы</h2>
+              <h2 id="settings-title">вид страницы</h2>
             </div>
             <div class="settings-mount" id="settings-mount">
-              <label class="field-label" for="page-width">Ширина, px</label>
+              <label class="field-label" for="page-width">ширина, px</label>
               <input class="text-control compact-control" id="page-width" type="number" min="480" max="1440" value="960">
-              <label class="field-label" for="page-color">Цвет фона</label>
+              <label class="field-label" for="page-color">цвет фона</label>
               <div class="color-field"><input id="page-color" type="color" value="#F3EBDD"><span>#F3EBDD</span></div>
-              <label class="field-label" for="page-font">Шрифт текста</label>
-              <select class="select-control" id="page-font"><option>Системный</option><option>С засечками</option><option>Моноширинный</option></select>
+              <label class="field-label" for="page-font">шрифт текста</label>
+              <select class="select-control" id="page-font"><option>системный</option><option>с засечками</option><option>моноширинный</option></select>
             </div>
           </section>
-          <footer class="rail-footer">Файлы остаются на вашем устройстве.</footer>
+          <footer class="rail-footer">файлы остаются на вашем устройстве.</footer>
         </aside>
 
         <section class="preview-area" aria-labelledby="preview-title">
           <div class="preview-toolbar">
             <div>
-              <h1 id="preview-title">Предпросмотр</h1>
+              <h1 id="preview-title">предпросмотр</h1>
             </div>
-            <div class="preview-controls" role="group" aria-label="Размер предпросмотра">
-              <button class="view-button is-active" type="button" data-preview-mode="desktop" aria-pressed="true" aria-label="Просмотр на компьютере" title="Компьютер">⌗</button>
-              <button class="view-button" type="button" data-preview-mode="mobile" aria-pressed="false" aria-label="Просмотр на телефоне" title="Телефон">▯</button>
+            <div class="preview-controls" role="group" aria-label="размер предпросмотра">
+              <button class="view-button is-active" type="button" data-preview-mode="desktop" aria-pressed="true" aria-label="просмотр на компьютере" title="компьютер">⌗</button>
+              <button class="view-button" type="button" data-preview-mode="mobile" aria-pressed="false" aria-label="просмотр на телефоне" title="телефон">▯</button>
             </div>
           </div>
-          <p class="visually-hidden" id="preview-status" aria-live="polite">Предпросмотр готов.</p>
+          <p class="visually-hidden" id="preview-status" aria-live="polite">предпросмотр готов.</p>
           <div class="preview-frame" id="preview-mount" role="region" aria-labelledby="preview-title"></div>
-          <button class="button button-quiet return-editor-button" type="button" data-action="return-editor">Вернуться к редактору</button>
-          <p class="preview-note">Предпросмотр обновляется по мере редактирования.</p>
+          <button class="button button-quiet return-editor-button" type="button" data-action="return-editor">вернуться к редактору</button>
+          <p class="preview-note">предпросмотр обновляется по мере редактирования.</p>
         </section>
       </main>
     </div>

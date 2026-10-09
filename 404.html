@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#F3EBDD">
+    <title>страница не найдена — Static Studio</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+      main { min-height: 100vh; display: grid; place-items: center; padding: 32px; }
+      article { width: min(100%, 640px); padding: clamp(28px, 7vw, 72px); border: 1px solid var(--line); background: var(--paper); }
+      h1 { margin: 18px 0 16px; color: var(--ink); font-family: var(--heading-font); font-size: clamp(42px, 8vw, 78px); font-weight: 400; line-height: .95; }
+      p { max-width: 430px; color: var(--muted-strong); font-size: 16px; }
+      a { display: inline-block; margin-top: 28px; color: var(--accent-strong); text-underline-offset: 4px; }
+      .overline { color: var(--accent-strong); font-size: 11px; letter-spacing: .12em; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <div class="overline">Static Studio · 404</div>
+        <h1>страница не найдена</h1>
+        <p>проверьте адрес или вернитесь к редактору, чтобы продолжить работу.</p>
+        <a href="./">вернуться в Static Studio</a>
+      </article>
+    </main>
+  </body>
+</html>
