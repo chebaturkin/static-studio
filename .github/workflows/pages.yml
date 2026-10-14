@@ -30,7 +30,7 @@ jobs:
       - name: prepare public files
         run: |
           mkdir -p _site
-          cp index.html app.js styles.css favicon.svg 404.html _site/
+          cp index.html app.js i18n.js styles.css favicon.svg 404.html _site/
       - name: configure pages
         uses: actions/configure-pages@v5
       - name: upload artifact

@@ -17,7 +17,9 @@ const context = {
   window: {},
 };
 vm.createContext(context);
-vm.runInContext(source, context, { filename: 'app.js' });
+context.navigator = { languages: ['ru-RU'] };
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'i18n.js'), 'utf8'), context, { filename: 'i18n.js' });
+  vm.runInContext(source, context, { filename: 'app.js' });
 const studio = context.window.StaticStudio;
 
 test('exposes safe URL validation for links and images', () => {

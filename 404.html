@@ -1,9 +1,10 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
+  <base href="/static-studio/">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>страница не найдена | static studio</title>
+  <title data-i18n="notFound.title">page not found | static studio</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="styles.css">
   <style>
@@ -15,5 +16,12 @@
     a { text-decoration: none; }
   </style>
 </head>
-<body><main><article><span class="overline">static studio · 404</span><h1>страница не найдена</h1><p>проверьте адрес или вернитесь в редактор, чтобы продолжить работу.</p><a class="button button-accent" href="./">открыть редактор</a></article></main></body>
+<body><main><article><span class="overline">static studio · 404</span><h1 data-i18n="notFound.heading">page not found</h1><p data-i18n="notFound.body">check the address or return to the editor to continue your work.</p><a class="button button-accent" href="./" data-i18n="notFound.link">open the editor</a></article></main></body>
+<script src="i18n.js"></script>
+<script>
+  const home = document.querySelector('article a');
+  const url = new URL(home.href);
+  url.searchParams.set('lang', I18n.locale);
+  home.href = url.href;
+</script>
 </html>

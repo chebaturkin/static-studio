@@ -1,55 +1,59 @@
+**english** · [русский](README.ru.md)
+
 # static studio
 
-редактор для личных заметок и небольших страниц. добавьте текст, картинки и ссылки, посмотрите результат и скачайте готовую страницу. работает в браузере, без аккаунта и установки.
+an editor for personal notes and small pages. add text, images and links, preview the result and download a finished page. it runs in your browser, without an account or installation.
 
-[открыть редактор](https://chebaturkin.github.io/static-studio/)
+[open the editor](https://chebaturkin.github.io/static-studio/?lang=en)
 
-![static studio: содержание слева, страница справа](./docs/editor.png)
+![static studio with page content on the left and a live preview on the right](docs/en/editor.png)
 
 <details>
-<summary>выбор основы</summary>
+<summary>choose a starting point</summary>
 
-![выбор основы для новой страницы](./docs/start.png)
+![templates for a new page](docs/en/start.png)
 
 </details>
 
 <details>
-<summary>редактор на телефоне</summary>
+<summary>the mobile editor</summary>
 
-<img src="./docs/mobile.png" alt="static studio на телефоне: содержание страницы и поля выбранного блока" width="360">
+<img src="docs/en/mobile.png" alt="static studio on a phone, with page blocks and the selected text field" width="360">
 
 </details>
 
-## как пользоваться
+## how to use it
 
-1. выберите заметку или пустую страницу. есть также основы для инструкции, портфолио и афиши.
-2. измените название страницы. выберите блок в списке или нажмите на него в предпросмотре, чтобы редактировать.
-3. добавьте нужные блоки: заголовок, текст, изображение, ссылку или разделитель. новый блок появится после текущего.
-4. во вкладке **оформление** выберите палитру, шрифты и ширину. проверьте вид на компьютере и телефоне.
-5. нажмите **скачать сайт**, распакуйте zip и откройте `index.html`.
+1. choose a note or blank page. there are also templates for a guide, portfolio and event poster.
+2. change the page title. select a block in the list or click it in the preview to edit.
+3. add headings, text, images, links or dividers. a new block appears after the current one.
+4. use **design** to choose colours, fonts and width. check desktop and mobile previews.
+5. choose **download site**, unzip the archive and open `index.html`.
 
-блоки можно перемещать кнопками или перетаскиванием, копировать и удалять. отмена возвращает и отдельное действие, и предыдущую страницу после выбора новой основы.
+move blocks with buttons or drag them, duplicate them or delete them. undo restores individual edits and the previous page after choosing a new template.
 
-## где сохраняется работа
+## keeping your work
 
-изменения сохраняются в этом браузере. для резервной копии выберите **проект → сохранить проект**. получится json, который можно позже открыть через **проект → открыть проект**. если хранилище браузера недоступно или заполнено, редактор покажет предупреждение.
+changes are saved in this browser. choose **project → save project** for a json backup, then **project → open project** to edit it later. the editor shows a warning if browser storage is unavailable or full.
 
-все файлы обрабатываются на вашем устройстве. локальные изображения до 10 мб попадают в папку `assets/` внутри zip. картинки по внешним ссылкам загружаются с указанного сайта и требуют подключения к интернету.
+all files are processed on your device. local images up to 10 mb go into the zip’s `assets/` folder. images linked from another website load from that address and need an internet connection.
 
-zip содержит готовую страницу, стили и загруженные изображения. подсказки редактора и пустые блоки в него не попадают. для публикации загрузите распакованные файлы на статичный хостинг, например github pages. кнопка скачивания сама по себе не публикует сайт.
+the zip contains the finished page, styles and uploaded images. editor hints and empty blocks are left out. to publish, upload the unzipped files to a static host such as github pages. downloading does not publish the site.
 
-## запуск и проверка
+## language
 
-откройте `index.html` напрямую. сборка, зависимости и сервер для работы не нужны. есть [пример готовой страницы](./examples/export/index.html).
+**ru / en** lives in the header. a valid `?lang=ru` or `?lang=en` takes priority, then your saved choice, the first supported browser language and english as the fallback. switching preserves your current project, pending text, selection and undo history. fresh, untouched templates follow the selected language. after an edit, import or reload, the page stays as written.
 
-проверка логики и экспорта:
+## run and check
+
+open `index.html` directly. running the editor needs no build, dependencies or server. here is an [example exported page](examples/en/export/index.html).
 
 ```sh
 npm test
 node --check app.js
 ```
 
-проверка интерфейса через playwright, установка нужна только для разработки:
+browser checks use playwright, which is only needed for development:
 
 ```sh
 npm install --no-save --package-lock=false playwright
@@ -57,20 +61,21 @@ npx playwright install chromium
 python3 -m http.server 4184 --bind 127.0.0.1
 ```
 
-в другом терминале:
+in another terminal:
 
 ```sh
 npm run test:browser
+I18N_URL=http://127.0.0.1:4184 python3 tests/i18n_browser.py
 ```
 
-для другого адреса сервера задайте `STUDIO_URL`. браузерная проверка проходит редактирование, историю, перетаскивание, палитры, картинки, json, zip, восстановление, ошибки сохранения и пять размеров экрана.
+use `STUDIO_URL` for a different server address. the browser checks cover editing, history, dragging, palettes, images, json, zip, recovery, storage failures, language switching and screen sizes.
 
-горячие клавиши: `cmd/ctrl + z` отменяет действие, `cmd/ctrl + shift + z` повторяет. в списке блоков `alt + ↑/↓` меняет порядок. в текстовом поле используются обычные команды редактирования браузера. меню и диалоги закрываются клавишей `escape`.
+shortcuts: `cmd/ctrl + z` undoes an action; `cmd/ctrl + shift + z` redoes it. in the block list, `alt + ↑/↓` changes the order. text fields keep the browser’s normal editing commands. `escape` closes menus and dialogs.
 
-## публикация редактора
+## publish the editor
 
-workflow [pages.yml](./.github/workflows/pages.yml) проверяет код и публикует файлы приложения при обновлении `master` или `main`. в настройках репозитория выберите **pages → github actions**. исходники, тесты и документация в публикацию не входят.
+[pages.yml](.github/workflows/pages.yml) checks the code and publishes application files when `master` or `main` changes. choose **pages → github actions** in repository settings. tests and documentation are not included in the deployment.
 
-## границы
+## limits
 
-редактор хранит одну текущую страницу и последние 50 действий в этой сессии. отдельные страницы сохраняйте в json. здесь нет облачной синхронизации, совместного редактирования, базы данных или публикации в один клик. ссылки поддерживают `https://`, относительные пути и якоря; опасные протоколы блокируются. старые проекты v1 и v2 продолжают открываться.
+the editor keeps one current page and the last 50 actions in this session. save separate pages as json. it has no cloud sync, shared editing, database or one-click publishing. links support `https://`, relative paths and anchors; unsafe protocols are blocked. old v1 and v2 projects still open.

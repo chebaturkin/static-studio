@@ -6,11 +6,11 @@ const path = require('node:path');
 const os = require('node:os');
 
 (async () => {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined });
   const output = await fs.mkdtemp(path.join(os.tmpdir(), 'static-studio-qa-'));
   const url = process.env.STUDIO_URL || 'http://127.0.0.1:4184/';
   const errors = [];
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+  const page = await browser.newPage({ locale: 'ru-RU', viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
   page.on('pageerror', error => errors.push(error.message));
   const click = selector => page.locator(selector).click();
   const add = async type => {
@@ -155,7 +155,7 @@ const os = require('node:os');
     await page.waitForFunction(() => document.activeElement.matches('#project-menu summary'));
 
     // Persistent save failure must be visible instead of claiming success.
-    const blocked = await browser.newContext();
+    const blocked = await browser.newContext({ locale: 'ru-RU' });
     await blocked.addInitScript(() => { Storage.prototype.setItem = () => { throw new DOMException('storage unavailable', 'QuotaExceededError'); }; });
     const blockedPage = await blocked.newPage();
     await blockedPage.goto(url);

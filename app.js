@@ -1,20 +1,23 @@
+// Only owned interface strings are translated. Project data is always kept verbatim.
+const i18n = globalThis.I18n;
+const t = (key, values) => i18n.t(key, values);
 /* static studio: project state, templates, editor, and export. */
 
-const BLOCK_LABELS = Object.freeze({
-  heading: 'заголовок',
-  text: 'текст',
-  image: 'изображение',
-  link: 'ссылка',
-  divider: 'разделитель',
-});
+const BLOCK_LABELS = i18n.live(() => (Object.freeze({
+  heading: t("m134"),
+  text: t("m049"),
+  image: t("m133"),
+  link: t("m132"),
+  divider: t("m036"),
+})));
 
-const TEMPLATE_LABELS = Object.freeze({
-  note: 'заметка',
-  portfolio: 'портфолио',
-  poster: 'афиша',
-  guide: 'инструкция',
-  blank: 'пустая страница',
-});
+const TEMPLATE_LABELS = i18n.live(() => (Object.freeze({
+  note: t("m131"),
+  portfolio: t("m130"),
+  poster: t("m129"),
+  guide: t("m128"),
+  blank: t("m127"),
+})));
 
 const DEFAULT_SETTINGS = Object.freeze({
   width: 760,
@@ -121,11 +124,11 @@ function withId(type, defaults, overrides = {}) {
 }
 
 function createHeading(overrides = {}) {
-  return withId('heading', { content: 'соберите страницу', level: 1 }, overrides);
+  return withId('heading', { content: t("m126"), level: 1 }, overrides);
 }
 
 function createText(overrides = {}) {
-  return withId('text', { content: 'добавьте текст блока.' }, overrides);
+  return withId('text', { content: t("m125") }, overrides);
 }
 
 function createImage(overrides = {}) {
@@ -133,7 +136,7 @@ function createImage(overrides = {}) {
 }
 
 function createLink(overrides = {}) {
-  return withId('link', { label: 'открыть ссылку', url: 'https://example.com' }, overrides);
+  return withId('link', { label: t("m124"), url: 'https://example.com' }, overrides);
 }
 
 function createDivider(overrides = {}) {
@@ -145,36 +148,36 @@ const blockFactories = Object.freeze({ heading: createHeading, text: createText,
 const templateFactories = Object.freeze({
   blank: () => [],
   note: () => [
-    createHeading({ content: 'название заметки' }),
-    createText({ content: 'здесь будет текст вашей заметки.' }),
+    createHeading({ content: t("m123") }),
+    createText({ content: t("m122") }),
   ],
   portfolio: () => [
-    createHeading({ content: 'избранные работы' }),
-    createText({ content: 'несколько слов о вас и вашей работе.' }),
-    createImage({ caption: 'название проекта' }),
-    createLink({ label: 'посмотреть все проекты', url: 'https://example.com/portfolio' }),
+    createHeading({ content: t("m121") }),
+    createText({ content: t("m120") }),
+    createImage({ caption: t("m119") }),
+    createLink({ label: t("m118"), url: 'https://example.com/portfolio' }),
     createDivider(),
   ],
   poster: () => [
-    createHeading({ content: 'название события' }),
-    createText({ content: 'дата · время\nместо проведения' }),
-    createImage({ alt: 'постер события', caption: 'программа и детали' }),
-    createLink({ label: 'зарегистрироваться', url: 'https://example.com/register' }),
+    createHeading({ content: t("m117") }),
+    createText({ content: t("m116") }),
+    createImage({ alt: t("m115"), caption: t("m114") }),
+    createLink({ label: t("m113"), url: 'https://example.com/register' }),
   ],
   guide: () => [
-    createHeading({ content: 'мини-справочник' }),
-    createText({ content: 'о чём эта инструкция и кому она пригодится.' }),
+    createHeading({ content: t("m112") }),
+    createText({ content: t("m111") }),
     createDivider(),
-    createHeading({ content: 'раздел', level: 2 }),
-    createText({ content: 'текст раздела.' }),
-    createLink({ label: 'дополнительный материал', url: 'https://example.com/guide' }),
+    createHeading({ content: t("m110"), level: 2 }),
+    createText({ content: t("m109") }),
+    createLink({ label: t("m108"), url: 'https://example.com/guide' }),
   ],
 });
 
 const templates = Object.freeze(Object.keys(TEMPLATE_LABELS).reduce((result, key) => {
   result[key] = Object.freeze({
     id: key,
-    label: TEMPLATE_LABELS[key],
+    get label() { return TEMPLATE_LABELS[key]; },
     createBlocks: templateFactories[key],
   });
   return result;
@@ -184,7 +187,7 @@ function createDefaultProject(template = 'note') {
   const templateId = templates[template] ? template : 'note';
   return {
     id: createId('project'),
-    title: templateId === 'note' ? 'новая заметка' : templateId === 'blank' ? 'новая страница' : TEMPLATE_LABELS[templateId],
+    title: templateId === 'note' ? t("m107") : templateId === 'blank' ? t("m079") : TEMPLATE_LABELS[templateId],
     template: templateId,
     settings: { ...DEFAULT_SETTINGS },
     blocks: templateFactories[templateId](),
@@ -210,6 +213,23 @@ const dialogFocus = new WeakMap();
 let dragState = null;
 
 let initialized = false;
+// Only templates created in this session may follow language changes.
+// A restored/imported project is always treated as authored content.
+let pristineProject = null;
+function pristineSignature() {
+  const { selectedBlockId, ...project } = projectSnapshot();
+  return JSON.stringify(project);
+}
+function localizePristineTemplate() {
+  if (!pristineProject || pristineProject !== pristineSignature()) return;
+  state.title = i18n.owned(state.title);
+  state.blocks.forEach(block => {
+    for (const key of ['content', 'label', 'caption', 'alt']) if (typeof block[key] === 'string') block[key] = i18n.owned(block[key]);
+  });
+  pristineProject = pristineSignature();
+  scheduleSave();
+}
+
 
 const dom = {
   title: null,
@@ -267,6 +287,7 @@ function updateHistoryButtons() {
 }
 
 function rememberMutation(label, { fieldKey = '', force = false } = {}) {
+  pristineProject = null;
   const now = Date.now();
   const canCoalesce = !force && fieldKey && history.lastFieldKey === fieldKey && now - history.lastFieldAt < 700;
   if (!canCoalesce) history.past.push({ label, snapshot: projectSnapshot() });
@@ -291,7 +312,7 @@ function undo() {
   history.lastFieldKey = '';
   renderAll();
   markDirty();
-  setProjectStatus(`отменено: ${entry.label}.`);
+  setProjectStatus(t("m106", [i18n.owned(entry.label)]));
   return true;
 }
 
@@ -303,12 +324,12 @@ function redo() {
   history.lastFieldKey = '';
   renderAll();
   markDirty();
-  setProjectStatus(`повторено: ${entry.label}.`);
+  setProjectStatus(t("m105", [i18n.owned(entry.label)]));
   return true;
 }
 
 function markDirty() {
-  if (dom.saveState) dom.saveState.textContent = 'сохраняем…';
+  if (dom.saveState) dom.saveState.textContent = t("m104");
   scheduleSave();
   updateHistoryButtons();
 }
@@ -323,16 +344,16 @@ function saveToStorage() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(projectSnapshot()));
     if (dom.saveState) {
-      dom.saveState.textContent = 'сохранено в браузере';
+      dom.saveState.textContent = t("m001");
       delete dom.saveState.dataset.status;
     }
     return true;
   } catch {
     if (dom.saveState) {
-      dom.saveState.textContent = 'не сохранено · скачайте json';
+      dom.saveState.textContent = t("m103");
       dom.saveState.dataset.status = 'error';
     }
-    setProjectStatus('браузер не сохранил изменения. выберите «проект → сохранить проект», чтобы не потерять работу.', true);
+    setProjectStatus(t("m102"), true);
     return false;
   }
 }
@@ -421,11 +442,11 @@ function renderPreview(project = state, { mount = true } = {}) {
     if (block.type === 'heading') {
       if (!editing && !String(block.content || '').trim()) return '';
       const level = Math.min(3, Math.max(1, Number(block.level) || 1));
-      return `<h${level} class="preview-block preview-heading"${selection}>${textHtml(block.content, 'добавьте заголовок')}</h${level}>`;
+      return `<h${level} class="preview-block preview-heading"${selection}>${textHtml(block.content, t("m101"))}</h${level}>`;
     }
     if (block.type === 'text') {
       if (!editing && !String(block.content || '').trim()) return '';
-      return `<p class="preview-block preview-text"${selection}>${textHtml(block.content, 'добавьте текст')}</p>`;
+      return `<p class="preview-block preview-text"${selection}>${textHtml(block.content, t("m100"))}</p>`;
     }
     if (block.type === 'image') {
       const src = safeHref(block.src);
@@ -433,16 +454,16 @@ function renderPreview(project = state, { mount = true } = {}) {
       const caption = String(block.caption ?? '').trim();
       const media = src
         ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(block.alt || '')}" loading="lazy"${mount ? ` data-image-block-id="${escapeHtml(block.id || '')}"` : ''}>`
-        : '<div class="preview-image-placeholder" role="img" aria-label="изображение не добавлено"><span class="placeholder-cross" aria-hidden="true">+</span><span>добавьте изображение</span></div>';
+        : t("m099");
       return `<figure class="preview-block preview-image"${selection}>${media}${caption ? `<figcaption class="page-caption">${textHtml(caption, '')}</figcaption>` : ''}</figure>`;
     }
     if (block.type === 'link') {
       const href = safeLinkHref(block.url);
       if (!editing && (!href || !String(block.label || '').trim())) return '';
-      const label = textHtml(block.label, 'добавьте текст ссылки');
+      const label = textHtml(block.label, t("m098"));
       return href
         ? `<p class="preview-block preview-link"${selection}><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${label}</a></p>`
-        : `<p class="preview-block preview-link is-disabled"${selection}><span aria-disabled="true">${label}</span><small class="empty-hint">укажите адрес https://, путь или якорь</small></p>`;
+        : t("m097", [selection, label]);
     }
     if (block.type === 'divider') {
       return block.style === 'space'
@@ -451,13 +472,13 @@ function renderPreview(project = state, { mount = true } = {}) {
     }
     return '';
   }).join('');
-  const empty = editing ? '<div class="preview-empty"><h2>здесь будет ваша страница</h2><p>добавьте заголовок, текст или изображение в панели слева.</p><button class="button button-quiet" type="button" data-action="add-first-block">добавить текст</button></div>' : '';
+  const empty = editing ? t("m096") : '';
   const html = `<article class="page-preview"${mount ? ' tabindex="-1"' : ''} data-template="${escapeHtml(project?.template || 'note')}">${content || empty}</article>`;
   if (mount && dom.previewMount) {
     dom.previewMount.innerHTML = html;
     updatePreviewSelection();
   }
-  if (mount && dom.previewStatus) dom.previewStatus.textContent = 'предпросмотр обновлён.';
+  if (mount && dom.previewStatus) dom.previewStatus.textContent = t("m095");
   return html;
 }
 
@@ -484,7 +505,7 @@ function projectPayload() {
 
 function exportProject() {
   try {
-    if (typeof Blob === 'undefined' || typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function' || typeof document === 'undefined') throw new Error('браузер не поддерживает локальную загрузку файлов.');
+    if (typeof Blob === 'undefined' || typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function' || typeof document === 'undefined') throw new Error(t("m094"));
     const blob = new Blob([JSON.stringify(projectPayload(), null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -494,10 +515,10 @@ function exportProject() {
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 0);
-    setProjectStatus('проект экспортирован в static-studio-project.json.');
+    setProjectStatus(t("m093"));
     return true;
   } catch (error) {
-    setProjectStatus(`не удалось экспортировать проект: ${error.message}`, true);
+    setProjectStatus(t("m092", [error.message]), true);
     return false;
   }
 }
@@ -699,19 +720,7 @@ function buildExportFiles(project = state) {
   });
   const exportProject = { ...source, blocks };
   const title = escapeHtml(String(source.title || 'static studio'));
-  const html = `<!doctype html>
-<html lang="ru">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="${/^#[0-9a-f]{6}$/i.test(source.settings?.paper || '') ? source.settings.paper : DEFAULT_SETTINGS.paper}">
-    <meta name="description" content="локальная статичная страница, собранная в static studio.">
-    <title>${title}</title>
-    <link rel="stylesheet" href="styles.css">
-  </head>
-  <body><main>${renderPreview(exportProject, { mount: false })}</main></body>
-</html>
-`;
+  const html = t("m091", [/^#[0-9a-f]{6}$/i.test(source.settings?.paper || '') ? source.settings.paper : DEFAULT_SETTINGS.paper, title, renderPreview(exportProject, { mount: false })]);
   return {
     'index.html': html,
     'styles.css': exportStyles(source.settings),
@@ -733,19 +742,19 @@ function exportZip(project = state) {
     setTimeout(() => URL.revokeObjectURL(url), 0);
     const hasExternalImages = (project.blocks || []).some((block) => block?.type === 'image' && block.src && !/^data:image\//i.test(block.src));
     setProjectStatus(hasExternalImages
-      ? 'сайт скачан. картинки по внешним ссылкам требуют интернета.'
-      : 'сайт скачан. распакуйте zip и откройте index.html.');
+      ? t("m090")
+      : t("m089"));
     return blob;
   } catch (error) {
-    setProjectStatus(`не удалось скачать сайт: ${error.message}`, true);
+    setProjectStatus(t("m088", [error.message]), true);
     return false;
   }
 }
 
 function normalizeImportedProject(input, { allowDraftUrls = false } = {}) {
-  if (input?.version !== undefined && input.version !== 1 && input.version !== PROJECT_VERSION) throw new Error(`неподдерживаемая версия проекта: ${input.version}.`);
-  if (!input || typeof input !== 'object' || !Array.isArray(input.blocks) || input.blocks.length > MAX_BLOCKS) throw new Error(`файл проекта должен содержать не более ${MAX_BLOCKS} блоков.`);
-  if (input.template !== undefined && (typeof input.template !== 'string' || !Object.hasOwn(templates, input.template))) throw new Error('файл содержит неизвестный шаблон.');
+  if (input?.version !== undefined && input.version !== 1 && input.version !== PROJECT_VERSION) throw new Error(t("m087", [input.version]));
+  if (!input || typeof input !== 'object' || !Array.isArray(input.blocks) || input.blocks.length > MAX_BLOCKS) throw new Error(t("m086", [MAX_BLOCKS]));
+  if (input.template !== undefined && (typeof input.template !== 'string' || !Object.hasOwn(templates, input.template))) throw new Error(t("m085"));
   const template = input.template === undefined ? 'note' : input.template;
   const settingsInput = input.settings && typeof input.settings === 'object' ? input.settings : {};
   const settings = { ...DEFAULT_SETTINGS };
@@ -759,7 +768,7 @@ function normalizeImportedProject(input, { allowDraftUrls = false } = {}) {
   }
   const usedIds = new Set();
   const blocks = input.blocks.map((raw) => {
-    if (!raw || typeof raw !== 'object' || !Object.hasOwn(blockFactories, raw.type) || typeof blockFactories[raw.type] !== 'function') throw new Error('файл содержит неизвестный тип блока.');
+    if (!raw || typeof raw !== 'object' || !Object.hasOwn(blockFactories, raw.type) || typeof blockFactories[raw.type] !== 'function') throw new Error(t("m084"));
     const factory = blockFactories[raw.type];
     let id = typeof raw.id === 'string' && raw.id && raw.id.length <= 120 ? raw.id : createId(raw.type);
     if (usedIds.has(id)) id = createId(raw.type);
@@ -768,29 +777,29 @@ function normalizeImportedProject(input, { allowDraftUrls = false } = {}) {
     for (const key of Object.keys(safe)) {
       if (key === 'id' || key === 'type') continue;
       if (typeof raw[key] === typeof safe[key]) {
-        if (typeof raw[key] === 'string' && raw[key].length > (key === 'src' ? MAX_IMAGE_DATA_URL_LENGTH : MAX_TEXT_LENGTH)) throw new Error('файл содержит слишком длинное поле.');
+        if (typeof raw[key] === 'string' && raw[key].length > (key === 'src' ? MAX_IMAGE_DATA_URL_LENGTH : MAX_TEXT_LENGTH)) throw new Error(t("m083"));
         safe[key] = raw[key];
       }
     }
     if (safe.type === 'heading') safe.level = Math.min(3, Math.max(1, Number(safe.level) || 1));
     if (safe.type === 'image' && safe.src && !allowDraftUrls) {
-      if (!safeHref(safe.src)) throw new Error('файл содержит небезопасный или неподдерживаемый адрес изображения.');
-      if (/^data:/i.test(safe.src) && !parseImageDataUrl(safe.src)) throw new Error('файл содержит неподдерживаемый формат изображения.');
+      if (!safeHref(safe.src)) throw new Error(t("m082"));
+      if (/^data:/i.test(safe.src) && !parseImageDataUrl(safe.src)) throw new Error(t("m081"));
     }
-    if (safe.type === 'link' && safe.url && !allowDraftUrls && !safeLinkHref(safe.url)) throw new Error('файл содержит небезопасный адрес ссылки.');
+    if (safe.type === 'link' && safe.url && !allowDraftUrls && !safeLinkHref(safe.url)) throw new Error(t("m080"));
     return safe;
   });
   const selectedBlockId = typeof input.selectedBlockId === 'string' && usedIds.has(input.selectedBlockId) ? input.selectedBlockId : blocks[0]?.id || null;
-  return { id: typeof input.id === 'string' && input.id.length <= 120 ? input.id : createId('project'), title: typeof input.title === 'string' ? input.title.slice(0, MAX_TITLE_LENGTH) : 'новая страница', template, settings, blocks, selectedBlockId };
+  return { id: typeof input.id === 'string' && input.id.length <= 120 ? input.id : createId('project'), title: typeof input.title === 'string' ? input.title.slice(0, MAX_TITLE_LENGTH) : t("m079"), template, settings, blocks, selectedBlockId };
 }
 
 function importProjectData(input) {
   const next = normalizeImportedProject(input);
-  rememberMutation('импорт проекта', { force: true });
+  rememberMutation(t("m078"), { force: true });
   Object.assign(state, next, { selectedBlockId: next.selectedBlockId || next.blocks[0]?.id || null });
   renderAll();
   markDirty();
-  setProjectStatus('проект импортирован.');
+  setProjectStatus(t("m077"));
   return true;
 }
 
@@ -809,16 +818,16 @@ function applySettings() {
   root.style.setProperty('--body-font', FONT_STACKS[settings.bodyFont] || FONT_STACKS.mono);
 }
 
-const PALETTES = Object.freeze({
-  paper: { label: 'бумага', paper: '#FFFDF7', ink: '#292E2B', accent: '#315D4A' },
-  light: { label: 'светлая', paper: '#FFFFFF', ink: '#252A32', accent: '#3659A1' },
-  dark: { label: 'тёмная', paper: '#252A28', ink: '#F2F0E7', accent: '#B5D3A4' },
-});
+const PALETTES = i18n.live(() => (Object.freeze({
+  paper: { label: t("m076"), paper: '#FFFDF7', ink: '#292E2B', accent: '#315D4A' },
+  light: { label: t("m075"), paper: '#FFFFFF', ink: '#252A32', accent: '#3659A1' },
+  dark: { label: t("m074"), paper: '#252A28', ink: '#F2F0E7', accent: '#B5D3A4' },
+})));
 
 function applyPalette(name) {
   const palette = PALETTES[name];
   if (!palette) return false;
-  rememberMutation('смена палитры', { force: true });
+  rememberMutation(t("m073"), { force: true });
   Object.assign(state.settings, { paper: palette.paper, ink: palette.ink, accent: palette.accent });
   applySettings();
   syncSettingControls({ preserveActive: false });
@@ -831,13 +840,9 @@ function renderSettings() {
   if (!dom.settingsMount) return;
   const settings = state.settings || DEFAULT_SETTINGS;
   const widthOptions = WIDTH_PRESETS.map((width) => `<option value="${width}"${Number(settings.width) === width ? ' selected' : ''}>${width} px</option>`).join('');
-  const fonts = [['serif', 'с засечками'], ['grotesk', 'гротеск'], ['system', 'системный'], ['mono', 'моноширинный']];
+  const fonts = [['serif', t("m072")], ['grotesk', t("m071")], ['system', t("m070")], ['mono', t("m069")]];
   const fontOptions = (value) => fonts.map(([key, label]) => `<option value="${key}"${value === key ? ' selected' : ''}>${label}</option>`).join('');
-  dom.settingsMount.innerHTML = `
-    <div class="setting-group"><h3>палитра</h3><div class="palette-options">${Object.entries(PALETTES).map(([key, palette]) => `<button class="palette-button" type="button" data-action="palette" data-palette="${key}" aria-pressed="${['paper', 'ink', 'accent'].every((field) => settings[field] === palette[field])}"><span class="palette-sample" style="background:${palette.paper};color:${palette.ink}">а<span style="background:${palette.accent}"></span></span>${palette.label}</button>`).join('')}</div></div>
-    <div class="setting-group"><h3>цвета</h3>${[['paper', 'фон'], ['ink', 'текст'], ['accent', 'ссылки']].map(([key, label]) => `<label class="color-field" for="page-${key}"><span>${label}</span><span class="color-value" data-color-value="${key}">${settings[key].toLowerCase()}</span><input id="page-${key}" data-setting="${key}" type="color" value="${settings[key]}"></label>`).join('')}</div>
-    <div class="setting-group"><h3>шрифты</h3><label class="field-label" for="page-heading-font">заголовки</label><select class="select-control" id="page-heading-font" data-setting="headingFont">${fontOptions(settings.headingFont)}</select><label class="field-label" for="page-body-font">основной текст</label><select class="select-control" id="page-body-font" data-setting="bodyFont">${fontOptions(settings.bodyFont)}</select></div>
-    <div class="setting-group"><h3>ширина</h3><label class="visually-hidden" for="page-width-preset">ширина страницы</label><select class="select-control" id="page-width-preset" data-setting="widthPreset"><option value="">своя ширина</option>${widthOptions}</select><label class="field-label" for="page-width">своя ширина, px</label><input class="text-control" id="page-width" data-setting="width" type="number" min="480" max="1440" step="1" value="${settings.width}"></div>`;
+  dom.settingsMount.innerHTML = t("m065", [Object.entries(PALETTES).map(([key, palette]) => t("m066", [key, ['paper', 'ink', 'accent'].every((field) => settings[field] === palette[field]), palette.paper, palette.ink, palette.accent, palette.label])).join(''), [['paper', t("m068")], ['ink', t("m049")], ['accent', t("m067")]].map(([key, label]) => `<label class="color-field" for="page-${key}"><span>${label}</span><span class="color-value" data-color-value="${key}">${settings[key].toLowerCase()}</span><input id="page-${key}" data-setting="${key}" type="color" value="${settings[key]}"></label>`).join(''), fontOptions(settings.headingFont), fontOptions(settings.bodyFont), widthOptions, settings.width]);
   applySettings();
 }
 
@@ -903,10 +908,10 @@ function actionButton(action, label, disabled = false) {
 }
 
 function blockSummary(block) {
-  if (block.type === 'heading' || block.type === 'text') return String(block.content || '').split('\n')[0] || (block.type === 'heading' ? 'пустой заголовок' : 'пустой текст');
-  if (block.type === 'link') return block.label || 'новая ссылка';
-  if (block.type === 'image') return block.caption || block.name || 'новое изображение';
-  return block.style === 'space' ? 'отступ' : 'тонкая линия';
+  if (block.type === 'heading' || block.type === 'text') return String(block.content || '').split('\n')[0] || (block.type === 'heading' ? t("m064") : t("m063"));
+  if (block.type === 'link') return block.label || t("m062");
+  if (block.type === 'image') return block.caption || block.name || t("m061");
+  return block.style === 'space' ? t("m034") : t("m035");
 }
 
 function renderBlockList() {
@@ -918,7 +923,7 @@ function renderBlockList() {
       <button class="block-select" type="button" data-action="select" data-block-id="${escapeHtml(block.id)}" data-focus-key="row:${escapeHtml(block.id)}" aria-pressed="${selected}" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown">
         <span class="block-type-icon">${icon(block.type)}</span><span class="block-row-copy"><span class="block-summary">${escapeHtml(blockSummary(block))}</span><span class="block-name">${typeLabel}</span></span><span class="block-grip" aria-hidden="true">⠿</span>
       </button></li>`;
-  }).join('') || '<li class="blocks-empty">добавьте первый блок</li>';
+  }).join('') || t("m060");
   const count = document.querySelector('#block-count');
   if (count) count.textContent = state.blocks.length;
 }
@@ -933,27 +938,27 @@ function renderBlockEditor() {
   }
   dom.editor.closest('.editor-section')?.removeAttribute('hidden');
   const index = state.blocks.indexOf(block);
-  let html = `<div class="editor-block-heading" data-block-id="${escapeHtml(block.id)}"><h2>${BLOCK_LABELS[block.type]}</h2><div class="block-actions">${actionButton('move-up', 'переместить выше', index === 0)}${actionButton('move-down', 'переместить ниже', index === state.blocks.length - 1)}${actionButton('duplicate', 'сделать копию')}${actionButton('delete', 'удалить блок')}</div></div>`;
+  let html = `<div class="editor-block-heading" data-block-id="${escapeHtml(block.id)}"><h2>${BLOCK_LABELS[block.type]}</h2><div class="block-actions">${actionButton('move-up', t("m059"), index === 0)}${actionButton('move-down', t("m058"), index === state.blocks.length - 1)}${actionButton('duplicate', t("m057"))}${actionButton('delete', t("m056"))}</div></div>`;
   if (block.type === 'heading') {
-    html += textareaField({ block, field: 'content', label: 'текст заголовка', value: block.content, placeholder: 'введите заголовок' });
-    html += selectField({ block, field: 'level', label: 'уровень', value: String(block.level || 1), options: [['1', 'крупный'], ['2', 'средний'], ['3', 'малый']] });
+    html += textareaField({ block, field: 'content', label: t("m055"), value: block.content, placeholder: t("m054") });
+    html += selectField({ block, field: 'level', label: t("m053"), value: String(block.level || 1), options: [['1', t("m052")], ['2', t("m051")], ['3', t("m050")]] });
   } else if (block.type === 'text') {
-    html += textareaField({ block, field: 'content', label: 'текст', value: block.content, placeholder: 'введите текст блока' });
+    html += textareaField({ block, field: 'content', label: t("m049"), value: block.content, placeholder: t("m048") });
   } else if (block.type === 'image') {
-    html += `<button class="button button-quiet image-upload-button" type="button" data-action="upload-image" data-block-id="${escapeHtml(block.id)}">загрузить изображение</button>`;
-    if (block.src) html += `<button class="button button-quiet image-clear-button" type="button" data-action="clear-image" data-block-id="${escapeHtml(block.id)}">убрать изображение</button>`;
+    html += t("m047", [escapeHtml(block.id)]);
+    if (block.src) html += t("m046", [escapeHtml(block.id)]);
     if (/^data:image\//i.test(block.src)) {
-      html += `<p class="file-name">${escapeHtml(block.name || 'изображение с устройства')}</p>`;
+      html += `<p class="file-name">${escapeHtml(block.name || t("m045"))}</p>`;
     } else {
-      html += inputField({ block, field: 'src', label: 'или ссылка на изображение', value: block.src, type: 'text', placeholder: 'https://example.com/image.jpg' });
+      html += inputField({ block, field: 'src', label: t("m044"), value: block.src, type: 'text', placeholder: 'https://example.com/image.jpg' });
     }
-    html += inputField({ block, field: 'alt', label: 'описание', value: block.alt, placeholder: 'что изображено' });
-    html += inputField({ block, field: 'caption', label: 'подпись', value: block.caption, placeholder: 'необязательно' });
+    html += inputField({ block, field: 'alt', label: t("m043"), value: block.alt, placeholder: t("m042") });
+    html += inputField({ block, field: 'caption', label: t("m041"), value: block.caption, placeholder: t("m040") });
   } else if (block.type === 'link') {
-    html += inputField({ block, field: 'label', label: 'текст ссылки', value: block.label, placeholder: 'название ссылки' });
-    html += inputField({ block, field: 'url', label: 'адрес', value: block.url, type: 'text', placeholder: 'https://example.com' });
+    html += inputField({ block, field: 'label', label: t("m039"), value: block.label, placeholder: t("m038") });
+    html += inputField({ block, field: 'url', label: t("m037"), value: block.url, type: 'text', placeholder: 'https://example.com' });
   } else if (block.type === 'divider') {
-    html += selectField({ block, field: 'style', label: 'разделитель', value: block.style || 'line', options: [['line', 'тонкая линия'], ['space', 'отступ']] });
+    html += selectField({ block, field: 'style', label: t("m036"), value: block.style || 'line', options: [['line', t("m035")], ['space', t("m034")]] });
   }
   dom.editor.innerHTML = html;
 }
@@ -976,20 +981,21 @@ function moveBlock(id, direction) {
   if (index < 0) return false;
   const targetIndex = direction === 'up' ? index - 1 : index + 1;
   if (targetIndex < 0 || targetIndex >= state.blocks.length) return false;
-  commitMutation('перемещение блока', () => {
+  commitMutation(t("m003"), () => {
     [state.blocks[index], state.blocks[targetIndex]] = [state.blocks[targetIndex], state.blocks[index]];
   }, { force: true });
   state.selectedBlockId = id;
   renderAll({ focus: { focusKey: `row:${id}`, start: null, end: null } });
-  setProjectStatus(`блок перемещён на позицию ${targetIndex + 1}.`);
+  setProjectStatus(t("m002", [targetIndex + 1]));
   return true;
 }
 
 function newProject(templateId = 'note') {
   if (!Object.hasOwn(templates, templateId)) return false;
-  rememberMutation('создание страницы', { force: true });
+  rememberMutation(t("m033"), { force: true });
   const next = createDefaultProject(templateId);
   Object.assign(state, next, { selectedBlockId: next.blocks[0]?.id || null });
+  pristineProject = pristineSignature();
   renderAll();
   setPreviewMode(false);
   setEditorTab('content');
@@ -999,27 +1005,27 @@ function newProject(templateId = 'note') {
 
 function addBlock(type) {
   if (state.blocks.length >= MAX_BLOCKS) {
-    setProjectStatus(`нельзя добавить больше ${MAX_BLOCKS} блоков.`, true);
+    setProjectStatus(t("m031", [MAX_BLOCKS]), true);
     return;
   }
   const factory = blockFactories[type] || createText;
   const block = factory();
   const selectedIndex = state.blocks.findIndex((item) => item.id === state.selectedBlockId);
-  commitMutation('добавление блока', () => state.blocks.splice(selectedIndex < 0 ? state.blocks.length : selectedIndex + 1, 0, block), { force: true });
+  commitMutation(t("m032"), () => state.blocks.splice(selectedIndex < 0 ? state.blocks.length : selectedIndex + 1, 0, block), { force: true });
   state.selectedBlockId = block.id;
   renderAll({ focus: { focusKey: `${block.id}:${Object.keys(block).find((key) => key !== 'id' && key !== 'type') || 'content'}`, start: null, end: null } });
 }
 
 function duplicateBlock(id) {
   if (state.blocks.length >= MAX_BLOCKS) {
-    setProjectStatus(`нельзя добавить больше ${MAX_BLOCKS} блоков.`, true);
+    setProjectStatus(t("m031", [MAX_BLOCKS]), true);
     return;
   }
   const index = state.blocks.findIndex((block) => block.id === id);
   if (index < 0) return;
   const original = state.blocks[index];
   const copy = { ...original, id: createId(original.type) };
-  commitMutation('дублирование блока', () => state.blocks.splice(index + 1, 0, copy), { force: true });
+  commitMutation(t("m030"), () => state.blocks.splice(index + 1, 0, copy), { force: true });
   state.selectedBlockId = copy.id;
   renderAll({ focus: { focusKey: `row:${copy.id}`, start: null, end: null } });
 }
@@ -1027,10 +1033,10 @@ function duplicateBlock(id) {
 function deleteBlock(id) {
   const index = state.blocks.findIndex((block) => block.id === id);
   if (index < 0) return;
-  commitMutation('удаление блока', () => state.blocks.splice(index, 1), { force: true });
+  commitMutation(t("m029"), () => state.blocks.splice(index, 1), { force: true });
   state.selectedBlockId = state.blocks[Math.min(index, state.blocks.length - 1)]?.id || null;
   renderAll();
-  setProjectStatus('блок удалён. можно отменить.');
+  setProjectStatus(t("m028"));
 }
 
 function updateBlockField(blockId, field, value) {
@@ -1039,7 +1045,7 @@ function updateBlockField(blockId, field, value) {
   const nextValue = field === 'level' ? Math.min(3, Math.max(1, Number(value) || 1)) : String(value ?? '').slice(0, field === 'content' ? MAX_TEXT_LENGTH : MAX_IMAGE_DATA_URL_LENGTH);
   if (block[field] === nextValue) return;
   const fieldKey = `${blockId}:${field}`;
-  rememberMutation('редактирование блока', { fieldKey });
+  rememberMutation(t("m027"), { fieldKey });
   block[field] = nextValue;
   updateBlockSummary(blockId);
   renderPreview(state);
@@ -1082,7 +1088,7 @@ function handleTitleInput(event) {
   if (!dom.title || event.target !== dom.title) return;
   const nextTitle = String(event.target.value || '').slice(0, MAX_TITLE_LENGTH);
   if (nextTitle === state.title) return;
-  rememberMutation('изменение названия', { fieldKey: 'project:title' });
+  rememberMutation(t("m026"), { fieldKey: 'project:title' });
   state.title = nextTitle;
   markDirty();
 }
@@ -1096,16 +1102,16 @@ function updateSetting(field, value) {
     if (!Number.isFinite(parsed)) return;
     const next = Math.min(1440, Math.max(480, Math.round(parsed)));
     if (next === previous) return;
-    rememberMutation(`изменение настройки «${field}»`, { fieldKey });
+    rememberMutation(t("m025", [field]), { fieldKey });
     state.settings.width = next;
   } else if (['paper', 'ink', 'accent'].includes(field)) {
     if (!/^#[0-9a-f]{6}$/i.test(value)) return;
     if (String(value).toUpperCase() === previous) return;
-    rememberMutation(`изменение настройки «${field}»`, { fieldKey });
+    rememberMutation(t("m025", [field]), { fieldKey });
     state.settings[field] = value.toUpperCase();
   } else if (['headingFont', 'bodyFont'].includes(field) && FONT_STACKS[value]) {
     if (value === previous) return;
-    rememberMutation(`изменение настройки «${field}»`, { fieldKey });
+    rememberMutation(t("m025", [field]), { fieldKey });
     state.settings[field] = value;
   }
   applySettings();
@@ -1147,7 +1153,7 @@ function setPreviewMode(showPreview) {
   renderPreview(state);
   const toggle = document.querySelector('#mobile-preview-toggle');
   if (toggle) {
-    toggle.textContent = showPreview ? 'редактор' : 'посмотреть';
+    toggle.textContent = showPreview ? t("m024") : t("m023");
     toggle.setAttribute('aria-pressed', String(showPreview));
   }
   if (showPreview) dom.previewMount?.querySelector('.page-preview')?.focus?.({ preventScroll: true });
@@ -1176,13 +1182,13 @@ function setEditorTab(name) {
   });
 }
 
-const TEMPLATE_DESCRIPTIONS = Object.freeze({
-  note: 'для мыслей, текстов и записей',
-  blank: 'начните с чистого листа',
-  guide: 'шаги, материалы и полезные ссылки',
-  portfolio: 'работы и немного о себе',
-  poster: 'дата, место и подробности события',
-});
+const TEMPLATE_DESCRIPTIONS = i18n.live(() => (Object.freeze({
+  note: t("m022"),
+  blank: t("m021"),
+  guide: t("m020"),
+  portfolio: t("m019"),
+  poster: t("m018"),
+})));
 
 function renderTemplateChoices() {
   const mount = document.querySelector('#template-grid');
@@ -1245,7 +1251,7 @@ function handleGlobalClick(event) {
   } else if (action === 'clear-image') {
     const block = getSelectedBlock();
     if (block?.type === 'image') {
-      rememberMutation('удаление изображения', { force: true });
+      rememberMutation(t("m017"), { force: true });
       block.src = '';
       block.name = '';
       renderAll();
@@ -1266,23 +1272,23 @@ function handleImageFile(event) {
   const block = getBlock(event.target.dataset.blockId) || getSelectedBlock();
   event.target.value = '';
   if (!file || !block || block.type !== 'image') return;
-  if (!Object.hasOwn(IMAGE_MIME_EXTENSIONS, file.type)) return setProjectStatus('не удалось загрузить файл: выберите png, jpeg, gif, svg, webp или avif.', true);
-  if (file.size > MAX_IMAGE_SIZE) return setProjectStatus('изображение слишком большое. максимум 10 мб.', true);
+  if (!Object.hasOwn(IMAGE_MIME_EXTENSIONS, file.type)) return setProjectStatus(t("m016"), true);
+  if (file.size > MAX_IMAGE_SIZE) return setProjectStatus(t("m015"), true);
   const reader = new FileReader();
-  reader.onerror = () => setProjectStatus('не удалось прочитать изображение.', true);
+  reader.onerror = () => setProjectStatus(t("m014"), true);
   reader.onload = () => {
     if (getBlock(block.id) !== block) {
-      setProjectStatus('изображение не добавлено: блок уже изменён.', true);
+      setProjectStatus(t("m013"), true);
       return;
     }
-    rememberMutation('добавление изображения', { force: true });
+    rememberMutation(t("m012"), { force: true });
     block.src = String(reader.result || '');
     block.name = file.name;
     if (!block.alt) block.alt = file.name.replace(/\.[^.]+$/, '');
     state.selectedBlockId = block.id;
     renderAll();
     markDirty();
-    setProjectStatus(`изображение «${file.name}» добавлено.`);
+    setProjectStatus(t("m011", [file.name]));
   };
   reader.readAsDataURL(file);
 }
@@ -1293,10 +1299,10 @@ function handlePreviewImageError(event) {
   const placeholder = document.createElement('div');
   placeholder.className = 'preview-image-placeholder is-error';
   placeholder.setAttribute('role', 'img');
-  placeholder.setAttribute('aria-label', 'изображение не загрузилось');
-  placeholder.innerHTML = '<span class="placeholder-cross" aria-hidden="true">!</span><span class="empty-hint">изображение не загрузилось</span>';
+  placeholder.setAttribute('aria-label', t("m010"));
+  placeholder.innerHTML = t("m009");
   image.replaceWith(placeholder);
-  setProjectStatus('изображение не загрузилось. проверьте адрес или загрузите файл с устройства.', true);
+  setProjectStatus(t("m008"), true);
 }
 
 function handleProjectFile(event) {
@@ -1304,16 +1310,16 @@ function handleProjectFile(event) {
   event.target.value = '';
   if (!file) return;
   if (file.size > MAX_PROJECT_SIZE) {
-    setProjectStatus('файл проекта слишком большой. максимум 15 мб.', true);
+    setProjectStatus(t("m007"), true);
     return;
   }
   const reader = new FileReader();
-  reader.onerror = () => setProjectStatus('не удалось прочитать файл проекта.', true);
+  reader.onerror = () => setProjectStatus(t("m006"), true);
   reader.onload = () => {
     try {
       importProjectData(JSON.parse(String(reader.result || '')));
     } catch (error) {
-      setProjectStatus(error instanceof SyntaxError ? 'файл проекта содержит некорректный json.' : `не удалось импортировать проект: ${error.message}`, true);
+      setProjectStatus(error instanceof SyntaxError ? t("m005") : t("m004", [error.message]), true);
     }
   };
   reader.readAsText(file);
@@ -1382,14 +1388,14 @@ function handleDrop(event) {
   const after = event.clientY >= rect.top + rect.height / 2;
   const insertIndex = toIndex - (fromIndex < toIndex ? 1 : 0) + (after ? 1 : 0);
   if (insertIndex === fromIndex) { clearDragState(); return; }
-  rememberMutation('перемещение блока', { force: true });
+  rememberMutation(t("m003"), { force: true });
   const [moved] = state.blocks.splice(fromIndex, 1);
   state.blocks.splice(insertIndex, 0, moved);
   state.selectedBlockId = moved.id;
   markDirty();
   renderAll({ focus: { focusKey: `row:${moved.id}`, start: null, end: null } });
   clearDragState();
-  setProjectStatus(`блок перемещён на позицию ${insertIndex + 1}.`);
+  setProjectStatus(t("m002", [insertIndex + 1]));
 }
 
 function bindDom() {
@@ -1479,8 +1485,9 @@ function init() {
   state.selectedBlockId = state.selectedBlockId || state.blocks[0]?.id || null;
   renderAll();
   renderTemplateChoices();
-  if (restored && dom.saveState) dom.saveState.textContent = 'сохранено в браузере';
+  if (restored && dom.saveState) dom.saveState.textContent = t("m001");
   if (!restored) {
+    pristineProject = pristineSignature();
     document.querySelector('#new-page-warning').hidden = true;
     document.querySelector('#starter-dialog')?.showModal();
   }
@@ -1527,3 +1534,10 @@ if (typeof window !== 'undefined') {
     init,
   });
 }
+
+i18n.subscribe(() => { if (!initialized) return; localizePristineTemplate(); renderAll(); renderTemplateChoices();
+  const previewToggle = document.querySelector('#mobile-preview-toggle');
+  if (previewToggle) previewToggle.textContent = dom.shell?.classList.contains('full-preview') ? t("m024") : t("m023");
+  if (dom.saveState) dom.saveState.textContent = i18n.owned(dom.saveState.textContent);
+  if (dom.status && !dom.status.hidden) dom.status.textContent = i18n.owned(dom.status.textContent);
+ const mount = document.querySelector('#add-options'); if (mount) mount.innerHTML = Object.entries(BLOCK_LABELS).map(([key, label]) => `<button type="button" data-action="add-block" data-block-type="${key}">${icon(key)}${label}</button>`).join(''); });
