@@ -11,6 +11,8 @@ const context = {
   TextDecoder,
   Blob,
   URL,
+  setTimeout,
+  clearTimeout,
   atob: (value) => Buffer.from(value, 'base64').toString('binary'),
   window: {},
 };
@@ -26,6 +28,63 @@ test('exposes safe URL validation for links and images', () => {
   assert.equal(studio.safeHref('data:image/png;base64,AAAA'), 'data:image/png;base64,AAAA');
   assert.equal(studio.safeHref('data:text/html;base64,AAAA'), '');
   assert.equal(studio.safeLinkHref('data:image/png;base64,AAAA'), '');
+});
+
+test('offers an empty page without sample blocks', () => {
+  const project = studio.createDefaultProject('blank');
+  assert.equal(project.template, 'blank');
+  assert.equal(project.title, 'новая страница');
+  assert.equal(project.blocks.length, 0);
+});
+
+test('starting a new page preserves the previous page in undo history', () => {
+  studio.state.title = 'моя старая заметка';
+  const previous = JSON.stringify(studio.state.blocks);
+  studio.newProject('blank');
+  assert.equal(studio.state.blocks.length, 0);
+  assert.equal(studio.state.title, 'новая страница');
+  assert.equal(studio.undo(), true);
+  assert.equal(studio.state.title, 'моя старая заметка');
+  assert.equal(JSON.stringify(studio.state.blocks), previous);
+});
+
+test('inserts a new block after the current block', () => {
+  const first = studio.state.blocks[0];
+  studio.state.selectedBlockId = first.id;
+  studio.addBlock('text');
+  assert.equal(studio.state.blocks[0].id, first.id);
+  assert.equal(studio.state.blocks[1].id, studio.state.selectedBlockId);
+  studio.undo();
+});
+
+test('export omits editor placeholders and block selection controls', () => {
+  const files = studio.buildExportFiles({
+    title: 'пустая заметка',
+    template: 'note',
+    settings: studio.DEFAULT_SETTINGS,
+    blocks: [studio.createHeading({ content: '' }), studio.createText({ content: '' }), studio.createImage()],
+  });
+  assert.doesNotMatch(files['index.html'], /добавьте|изображение не добавлено|data-preview-block-id|tabindex/);
+  assert.doesNotMatch(files['index.html'], /<h1|<figure/);
+});
+
+test('exported links and muted text follow the chosen palette', () => {
+  const files = studio.buildExportFiles({
+    title: 'заметка', template: 'note', blocks: [],
+    settings: { ...studio.DEFAULT_SETTINGS, paper: '#FFFFFF', ink: '#112233', accent: '#006600' },
+  });
+  assert.match(files['styles.css'], /--accent: #006600/);
+  assert.match(files['styles.css'], /--accent-strong: var\(--accent\)/);
+  assert.match(files['styles.css'], /--muted-strong: color-mix\(in srgb, var\(--ink\)/);
+  assert.match(files['index.html'], /name="theme-color" content="#FFFFFF"/);
+});
+
+test('recovers incomplete link drafts from browser storage without exporting unsafe URLs', () => {
+  const raw = { template: 'note', blocks: [{ type: 'link', label: 'черновик', url: 'javascript:alert(1)' }] };
+  assert.throws(() => studio.normalizeImportedProject(raw), /небезопасный/);
+  const draft = studio.normalizeImportedProject(raw, { allowDraftUrls: true });
+  assert.equal(draft.blocks[0].url, raw.blocks[0].url);
+  assert.doesNotMatch(studio.buildExportFiles(draft)['index.html'], /javascript:|<a href/);
 });
 
 test('normalizes imported headings to the supported 1–3 levels', () => {

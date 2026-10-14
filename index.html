@@ -3,115 +3,107 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Static Studio — локальная мастерская</title>
-    <meta name="description" content="Static Studio — локальная мастерская для текстов, изображений и ссылок.">
-    <meta name="theme-color" content="#F3EBDD">
+    <title>static studio | заметки и небольшие страницы</title>
+    <meta name="description" content="соберите заметку или небольшую страницу из текста, изображений и ссылок. всё работает в браузере, без аккаунта.">
+    <meta name="theme-color" content="#F4F5F1">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
+    <a class="skip-link" href="#main">к редактору</a>
     <div class="studio-shell">
       <header class="topbar" aria-label="панель проекта">
-        <a class="brand" href="#main" aria-label="Static Studio — к началу">
-          <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
-            <path d="M4 4h24v24H4zM4 12h24M12 4v24M20 12v16" />
-          </svg>
-          <span class="brand-name">Static Studio</span>
+        <a class="brand" href="#main" aria-label="static studio, к редактору">
+          <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="13" fill="currentColor"/><g fill="none" stroke="#fffdf7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 12h12a2 2 0 0 1 2 2v16H15a2 2 0 0 1-2-2z"/><path d="M13 25H9V10a2 2 0 0 1 2-2h12v4M17 18h6M17 22h6"/></g></svg>
+          <span class="brand-name">static studio</span>
         </a>
-        <div class="project-name project-identity" aria-label="текущий проект">
-          <label class="visually-hidden" for="project-title">название проекта</label>
-          <input class="project-title" id="project-title" name="title" type="text" value="без названия" maxlength="120" autocomplete="off" spellcheck="false">
-          <span class="save-state" id="save-state">· локально</span>
-          <span class="project-status" id="project-status" role="status" aria-live="polite" aria-atomic="true">готово.</span>
-        </div>
         <nav class="topbar-actions" aria-label="действия с проектом">
           <div class="history-actions" role="group" aria-label="история изменений">
-            <button class="button button-quiet history-button" id="undo-button" type="button" aria-label="отменить последнее действие (Control или Command + Z)" aria-keyshortcuts="Control+Z Meta+Z" disabled>
-              <span>отменить</span><kbd aria-hidden="true">⌘Z</kbd>
-            </button>
-            <button class="button button-quiet history-button" id="redo-button" type="button" aria-label="повторить отменённое действие (Control или Command + Shift + Z)" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z" disabled>
-              <span>повторить</span><kbd aria-hidden="true">⇧⌘Z</kbd>
-            </button>
+            <button class="icon-button" id="undo-button" type="button" aria-label="отменить действие" title="отменить · cmd/ctrl + z" aria-keyshortcuts="Control+Z Meta+Z" disabled><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5-5 5 5 5M4 10h9a6 6 0 0 1 6 6v3"/></svg></button>
+            <button class="icon-button" id="redo-button" type="button" aria-label="повторить действие" title="повторить · cmd/ctrl + shift + z" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z" disabled><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5 5 5-5 5M20 10h-9a6 6 0 0 0-6 6v3"/></svg></button>
           </div>
-          <button class="button button-quiet mobile-preview-toggle" id="mobile-preview-toggle" type="button" data-action="toggle-preview" aria-pressed="false">предпросмотр</button>
-          <button class="button button-quiet" id="import-project" type="button">импортировать проект</button>
-          <button class="button button-quiet" id="export-project" type="button">экспортировать JSON</button>
-          <button class="button button-accent" id="export-zip" type="button">экспортировать ZIP</button>
-          <input class="visually-hidden" id="project-file" type="file" accept="application/json,.json" tabindex="-1" aria-hidden="true">
-          <input class="visually-hidden" id="image-file" type="file" accept="image/avif,image/gif,image/jpeg,image/png,image/svg+xml,image/webp" tabindex="-1" aria-hidden="true">
+          <details class="project-menu" id="project-menu">
+            <summary class="button button-quiet">проект <svg class="icon small" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></summary>
+            <div class="menu-panel">
+              <button type="button" data-action="open-starter">новая страница <span>выбрать основу</span></button>
+              <button id="export-project" type="button">сохранить проект <span>json для дальнейшего редактирования</span></button>
+              <button id="import-project" type="button">открыть проект <span>загрузить сохранённый json</span></button>
+              <button type="button" data-action="open-help">как пользоваться</button>
+            </div>
+          </details>
+          <button class="button button-quiet" id="mobile-preview-toggle" type="button" data-action="toggle-preview" aria-pressed="false">посмотреть</button>
+          <button class="button button-accent" id="export-zip" type="button"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg><span>скачать сайт</span></button>
         </nav>
+        <input class="visually-hidden" id="project-file" type="file" accept="application/json,.json" tabindex="-1" aria-hidden="true">
+        <input class="visually-hidden" id="image-file" type="file" accept="image/avif,image/gif,image/jpeg,image/png,image/svg+xml,image/webp" tabindex="-1" aria-hidden="true">
       </header>
 
-      <main class="workspace" id="main">
+      <main class="workspace" id="main" tabindex="-1">
         <aside class="editor-rail" aria-label="редактор страницы">
-          <section class="rail-section composition-section" aria-labelledby="composition-title">
-            <div class="section-heading">
-              <span class="section-index">01</span>
-              <h2 id="composition-title">композиция</h2>
-            </div>
-            <label class="field-label" for="composition-select">основа страницы</label>
-            <select class="select-control" id="composition-select" name="composition">
-              <option value="note">заметка</option>
-              <option value="portfolio">портфолио</option>
-              <option value="poster">афиша</option>
-              <option value="guide">мини-справочник</option>
-            </select>
-          </section>
-
-          <section class="rail-section blocks-section" aria-labelledby="blocks-title">
-            <div class="section-heading section-heading-spread">
-              <div class="heading-label">
-                <span class="section-index">02</span>
-                <h2 id="blocks-title">блоки страницы</h2>
+          <div class="editor-tabs" role="tablist" aria-label="раздел редактора">
+            <button class="editor-tab is-active" id="content-tab" type="button" role="tab" aria-selected="true" aria-controls="content-panel" data-editor-tab="content">содержание</button>
+            <button class="editor-tab" id="design-tab" type="button" role="tab" aria-selected="false" aria-controls="design-panel" data-editor-tab="design" tabindex="-1">оформление</button>
+          </div>
+          <div class="editor-scroll">
+            <section id="content-panel" role="tabpanel" aria-labelledby="content-tab">
+              <div class="rail-section project-section">
+                <label class="field-label" for="project-title">название страницы</label>
+                <input class="text-control" id="project-title" name="title" type="text" value="новая заметка" maxlength="120" autocomplete="off" placeholder="моя заметка">
+                <div class="page-meta"><span id="template-name">заметка</span><button class="text-button" type="button" data-action="open-starter">другая основа</button></div>
               </div>
-              <div class="add-block-controls">
-                <select class="select-control add-block-type" id="add-block-type" aria-label="тип нового блока">
-                  <option value="heading">заголовок</option>
-                  <option value="text">текст</option>
-                  <option value="image">изображение</option>
-                  <option value="link">ссылка</option>
-                  <option value="divider">разделитель</option>
-                </select>
-                <button class="icon-button add-block" id="add-block" type="button" aria-label="добавить блок">+</button>
-              </div>
-            </div>
-            <ol class="block-list" id="block-list" role="listbox" aria-label="порядок блоков"></ol>
-            <div class="block-editor" id="block-editor" aria-label="настройки выбранного блока"></div>
-          </section>
-
-          <section class="rail-section settings-section" aria-labelledby="settings-title">
-            <div class="section-heading">
-              <span class="section-index">03</span>
-              <h2 id="settings-title">вид страницы</h2>
-            </div>
-            <div class="settings-mount" id="settings-mount">
-              <label class="field-label" for="page-width">ширина, px</label>
-              <input class="text-control compact-control" id="page-width" type="number" min="480" max="1440" value="960">
-              <label class="field-label" for="page-color">цвет фона</label>
-              <div class="color-field"><input id="page-color" type="color" value="#F3EBDD"><span>#F3EBDD</span></div>
-              <label class="field-label" for="page-font">шрифт текста</label>
-              <select class="select-control" id="page-font"><option>системный</option><option>с засечками</option><option>моноширинный</option></select>
-            </div>
-          </section>
-          <footer class="rail-footer">файлы остаются на вашем устройстве.</footer>
+              <section class="rail-section blocks-section" aria-labelledby="blocks-title">
+                <div class="section-heading"><h2 id="blocks-title">блоки</h2><span class="block-count" id="block-count">2</span></div>
+                <ol class="block-list" id="block-list" aria-label="блоки страницы"></ol>
+                <details class="add-menu" id="add-menu">
+                  <summary class="button add-block"><span aria-hidden="true">+</span> добавить блок</summary>
+                  <div class="add-options" id="add-options"></div>
+                </details>
+              </section>
+              <section class="rail-section editor-section" aria-label="редактирование блока"><div class="block-editor" id="block-editor"></div></section>
+            </section>
+            <section id="design-panel" role="tabpanel" aria-labelledby="design-tab" hidden>
+              <div class="rail-section"><h2 class="panel-title">оформление страницы</h2><div class="settings-mount" id="settings-mount"></div></div>
+            </section>
+          </div>
+          <footer class="rail-footer"><span class="save-state" id="save-state">сохраняется в браузере</span><button class="help-button" type="button" data-action="open-help" aria-label="как пользоваться">?</button></footer>
         </aside>
 
         <section class="preview-area" aria-labelledby="preview-title">
           <div class="preview-toolbar">
-            <div>
-              <h1 id="preview-title">предпросмотр</h1>
-            </div>
+            <h1 id="preview-title">ваша страница</h1>
             <div class="preview-controls" role="group" aria-label="размер предпросмотра">
-              <button class="view-button is-active" type="button" data-preview-mode="desktop" aria-pressed="true" aria-label="просмотр на компьютере" title="компьютер">⌗</button>
-              <button class="view-button" type="button" data-preview-mode="mobile" aria-pressed="false" aria-label="просмотр на телефоне" title="телефон">▯</button>
+              <button class="view-button is-active" type="button" data-preview-mode="desktop" aria-pressed="true" aria-label="просмотр на компьютере" title="компьютер"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 21h8m-4-5v5"/></svg><span>компьютер</span></button>
+              <button class="view-button" type="button" data-preview-mode="mobile" aria-pressed="false" aria-label="просмотр на телефоне" title="телефон"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg><span>телефон</span></button>
             </div>
           </div>
-          <p class="visually-hidden" id="preview-status" aria-live="polite">предпросмотр готов.</p>
+          <p class="visually-hidden" id="preview-status" aria-live="polite"></p>
           <div class="preview-frame" id="preview-mount" role="region" aria-labelledby="preview-title"></div>
-          <button class="button button-quiet return-editor-button" type="button" data-action="return-editor">вернуться к редактору</button>
-          <p class="preview-note">предпросмотр обновляется по мере редактирования.</p>
+          <div class="preview-footer"><span class="preview-note">нажмите на блок, чтобы изменить его</span><button class="text-button return-editor-button" type="button" data-action="return-editor">вернуться к редактору</button></div>
         </section>
       </main>
     </div>
+    <div class="toast" id="project-status" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+
+    <dialog class="studio-dialog starter-dialog" id="starter-dialog" aria-labelledby="starter-title">
+      <div class="dialog-topline"><span class="dialog-eyebrow">static studio</span><form method="dialog"><button class="icon-button" aria-label="закрыть" title="закрыть" type="submit">×</button></form></div>
+      <h2 id="starter-title">место для вашей страницы</h2>
+      <p class="dialog-intro">соберите заметку, инструкцию или страницу со ссылками. выберите основу и добавьте своё.</p>
+      <div class="template-grid" id="template-grid"></div>
+      <p class="dialog-footnote" id="new-page-warning" hidden>текущую страницу заменит новая. её можно вернуть кнопкой отмены.</p>
+      <p class="dialog-footnote">без регистрации. файлы обрабатываются на вашем устройстве.</p>
+    </dialog>
+    <dialog class="studio-dialog help-dialog" id="help-dialog" aria-labelledby="help-title">
+      <div class="dialog-topline"><span class="dialog-eyebrow">static studio</span><form method="dialog"><button class="icon-button" aria-label="закрыть справку" type="submit">×</button></form></div>
+      <h2 id="help-title">от заметки до страницы</h2>
+      <div class="help-content">
+        <p><strong>добавьте своё.</strong> выберите блок слева или нажмите на него в предпросмотре. текст меняется сразу. новые блоки появляются после текущего.</p>
+        <p><strong>настройте вид.</strong> во вкладке «оформление» выберите цвета, шрифты и ширину. кнопка «посмотреть» открывает чистый предпросмотр.</p>
+        <p><strong>сохраните работу.</strong> изменения сохраняются в этом браузере. для резервной копии выберите «проект → сохранить проект». этот json можно открыть здесь позже.</p>
+        <p><strong>скачайте страницу.</strong> кнопка «скачать сайт» сохранит zip. распакуйте его и откройте index.html. для публикации загрузите все файлы на статичный хостинг, например github pages.</p>
+        <p class="help-shortcuts">cmd/ctrl + z: отмена · shift + cmd/ctrl + z: повтор<br>alt + ↑/↓: перемещение блока в списке</p>
+      </div>
+      <a class="text-link" href="https://github.com/chebaturkin/static-studio" target="_blank" rel="noopener noreferrer">исходники на github ↗</a>
+    </dialog>
     <script src="app.js" defer></script>
   </body>
 </html>

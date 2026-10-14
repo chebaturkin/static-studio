@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680" role="img" aria-labelledby="title desc">
   <title id="title">бумажная композиция</title>
-  <desc id="desc">тёплый бумажный фон с красной геометрической меткой.</desc>
-  <rect width="1200" height="680" fill="#E8DFD0"/>
-  <path d="M0 512h1200" stroke="#CFC4B3" stroke-width="2"/>
-  <path d="M96 128h320v320H96z" fill="#F3EBDD" stroke="#28251F" stroke-width="2"/>
-  <path d="M256 128v320M96 288h320" stroke="#CFC4B3" stroke-width="2"/>
-  <path d="M764 164h252v252H764z" fill="#C95B43"/>
-  <path d="M818 218h144v144H818z" fill="#F3EBDD"/>
-  <text x="96" y="592" fill="#655B51" font-family="monospace" font-size="22" letter-spacing="4">LOCAL / ASSET / 01</text>
+  <desc id="desc">две страницы и зелёный квадрат на светлом фоне.</desc>
+  <rect width="1200" height="680" rx="32" fill="#E9ECE5"/>
+  <rect x="110" y="100" width="340" height="420" rx="22" fill="#FFFDF7"/>
+  <rect x="155" y="165" width="210" height="13" rx="5" fill="#717D6B"/>
+  <path d="M155 215h245M155 250h190M155 285h220" stroke="#C3CABC" stroke-width="8" stroke-linecap="round"/>
+  <rect x="665" y="155" width="340" height="420" rx="22" fill="#FFFDF7"/>
+  <rect x="710" y="205" width="250" height="225" rx="16" fill="#315D4A"/>
+  <path d="M710 480h210M710 515h155" stroke="#C3CABC" stroke-width="8" stroke-linecap="round"/>
 </svg>

@@ -1,4 +1,4 @@
-/* Static Studio: project state, starter compositions, and block editor. */
+/* static studio: project state, templates, editor, and export. */
 
 const BLOCK_LABELS = Object.freeze({
   heading: 'заголовок',
@@ -12,16 +12,17 @@ const TEMPLATE_LABELS = Object.freeze({
   note: 'заметка',
   portfolio: 'портфолио',
   poster: 'афиша',
-  guide: 'мини-справочник',
+  guide: 'инструкция',
+  blank: 'пустая страница',
 });
 
 const DEFAULT_SETTINGS = Object.freeze({
-  width: 960,
-  paper: '#F3EBDD',
-  ink: '#28251F',
-  accent: '#C95B43',
+  width: 760,
+  paper: '#FFFDF7',
+  ink: '#292E2B',
+  accent: '#315D4A',
   headingFont: 'serif',
-  bodyFont: 'mono',
+  bodyFont: 'grotesk',
 });
 
 const FONT_STACKS = Object.freeze({
@@ -48,46 +49,40 @@ const MAX_IMAGE_DATA_URL_LENGTH = 15 * 1024 * 1024;
 const EXPORT_STYLES = `:root {
   --paper: #F3EBDD;
   --ink: #28251F;
-  --line: #CFC4B3;
-  --muted: #6A6056;
   --accent: #C95B43;
-  --muted-strong: #594F46;
-  --accent-strong: #A6402F;
+  --muted-strong: color-mix(in srgb, var(--ink) 72%, var(--paper));
+  --page-line: color-mix(in srgb, var(--ink) 22%, var(--paper));
+  --accent-strong: var(--accent);
   --page-width: 960px;
-  --heading-font: "PT Serif", "Iowan Old Style", "Palatino Linotype", serif;
+  --heading-font: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   --body-font: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
 }
-
 * { box-sizing: border-box; }
 html { min-width: 320px; background: var(--paper); }
-body { margin: 0; color: var(--ink); background: var(--paper); font-family: var(--body-font); font-size: 13px; line-height: 1.5; }
-h1, h2, p { margin: 0; }
-main { min-height: 100vh; padding: clamp(24px, 6vw, 72px); }
-.page-preview { width: min(100%, var(--page-width)); max-width: 100%; min-height: 575px; margin: 0 auto; padding: clamp(30px, 5vw, 68px) clamp(23px, 6vw, 75px); background: var(--paper); }
-.page-overline, .page-caption { color: var(--muted-strong); font-size: 10px; letter-spacing: .1em; }
-.page-preview h1, .page-preview h2, .page-preview h3, .page-preview h4, .page-preview h5, .page-preview h6 { margin: 35px 0 24px; color: var(--ink); font-family: var(--heading-font); font-weight: 400; line-height: 1.04; }
-.page-preview h1 { font-size: clamp(31px, 4.3vw, 56px); }
-.page-preview h2 { font-size: clamp(26px, 3.5vw, 45px); }
-.page-preview h3 { font-size: clamp(21px, 2.8vw, 34px); }
-.preview-text { max-width: 465px; color: var(--muted-strong); font-family: var(--body-font); font-size: 16px; line-height: 1.55; }
-.preview-rule { width: 100%; margin: 42px 0 23px; border: 0; border-top: 1px solid var(--line); }
-.preview-image { margin: 40px 0 0; }
-.preview-image img { display: block; width: 100%; max-height: 520px; object-fit: cover; border: 1px solid var(--line); }
-.preview-image-placeholder { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 9px; min-height: 145px; margin-top: 40px; border: 1px solid var(--line); color: var(--muted-strong); font-size: 10px; letter-spacing: .04em; }
-.placeholder-cross { color: var(--accent); font-size: 22px; }
-.page-caption { margin-top: 9px; }
-.preview-link { margin: 30px 0 0; font-family: var(--body-font); }
-.preview-link a { color: var(--accent-strong); text-underline-offset: 4px; }
-.preview-link.is-disabled { display: grid; gap: 6px; color: var(--muted); }
-.preview-link small { letter-spacing: .04em; }
-.preview-space { height: 42px; }
-.preview-empty { margin-top: 35px; color: var(--muted-strong); font-family: var(--body-font); }
+body { margin: 0; color: var(--ink); background: var(--paper); font-family: var(--body-font); }
+main { min-height: 100vh; padding: clamp(12px, 3.5vw, 48px); }
+h1, h2, h3, p { margin: 0; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.page-preview { width: min(100%, var(--page-width)); min-height: 560px; margin: 0 auto; padding: clamp(28px, 5vw, 60px); color: var(--ink); background: var(--paper); font-family: var(--body-font); line-height: 1.5; container-type: inline-size; overflow-wrap: anywhere; }
+.page-preview h1, .page-preview h2, .page-preview h3 { margin: 0 0 24px; color: var(--ink); font-family: var(--heading-font); font-weight: 400; letter-spacing: -.035em; line-height: 1.15; text-wrap: balance; }
+.page-preview h1 { font-size: clamp(32px, 9cqw, 52px); }
+.page-preview h2 { font-size: clamp(27px, 7cqw, 38px); }
+.page-preview h3 { font-size: clamp(23px, 5cqw, 30px); }
+.page-preview .preview-text { margin: 0 0 24px; color: var(--ink); font-size: 17px; line-height: 1.7; }
+.preview-rule { margin: 32px 0; border: 0; border-top: 1px solid var(--page-line); }
+.preview-space { height: 40px; }
+.preview-image { margin: 0 0 28px; }
+.preview-image img { display: block; width: 100%; max-height: 520px; object-fit: cover; border-radius: 12px; }
+.preview-image-placeholder { display: grid; justify-items: center; align-content: center; gap: 10px; min-height: 180px; border: 1px dashed var(--page-line); border-radius: 12px; color: var(--muted-strong); font-size: 14px; }
+.placeholder-cross { font-size: 26px; }
+.page-caption { margin: 10px 0 0; color: var(--muted-strong); font-family: var(--body-font); font-size: 13px; line-height: 1.5; }
+.preview-link { margin: 0 0 20px; font-family: var(--body-font); font-size: 17px; }
+.preview-link a { color: var(--accent-strong); text-decoration-thickness: 1px; text-underline-offset: 5px; }
+.preview-link a:hover { text-decoration-thickness: 2px; }
+.preview-link.is-disabled { display: grid; gap: 6px; color: var(--muted-strong); }
+.preview-link small { font-size: 13px; }
 .empty-hint { color: var(--muted-strong); font-style: italic; }
-::selection { color: var(--paper); background: var(--accent-strong); }
-.page-preview { box-shadow: 0 18px 36px rgba(40,37,31,.05); }
-.preview-link a { text-decoration-thickness: 1px; }
-@media (prefers-reduced-motion: no-preference) { .page-preview { animation: appear .5s ease both; } @keyframes appear { from { opacity: .2; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+.page-preview > :last-child { margin-bottom: 0; }
 `;
 
 const IMAGE_MIME_EXTENSIONS = Object.freeze({
@@ -100,7 +95,7 @@ const IMAGE_MIME_EXTENSIONS = Object.freeze({
 });
 
 const EXPORT_FONT_STACKS = Object.freeze({
-  serif: '"PT Serif", "Iowan Old Style", "Palatino Linotype", serif',
+  serif: '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif',
   mono: '"IBM Plex Mono", "SFMono-Regular", Consolas, monospace',
   system: 'ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   grotesk: '"Avenir Next", "Helvetica Neue", Helvetica, sans-serif',
@@ -148,16 +143,14 @@ function createDivider(overrides = {}) {
 const blockFactories = Object.freeze({ heading: createHeading, text: createText, image: createImage, link: createLink, divider: createDivider });
 
 const templateFactories = Object.freeze({
+  blank: () => [],
   note: () => [
-    createHeading({ content: 'соберите страницу' }),
-    createText({ content: 'текст, изображения и ссылки — в одном локальном проекте.' }),
-    createDivider(),
-    createText({ content: 'откройте шаблон, замените слова и скачайте готовый набор файлов.' }),
-    createImage({ caption: 'подпись к изображению' }),
+    createHeading({ content: 'название заметки' }),
+    createText({ content: 'здесь будет текст вашей заметки.' }),
   ],
   portfolio: () => [
     createHeading({ content: 'избранные работы' }),
-    createText({ content: 'соберите проекты в одном спокойном списке.' }),
+    createText({ content: 'несколько слов о вас и вашей работе.' }),
     createImage({ caption: 'название проекта' }),
     createLink({ label: 'посмотреть все проекты', url: 'https://example.com/portfolio' }),
     createDivider(),
@@ -170,7 +163,7 @@ const templateFactories = Object.freeze({
   ],
   guide: () => [
     createHeading({ content: 'мини-справочник' }),
-    createText({ content: 'соберите короткую инструкцию без лишнего шума.' }),
+    createText({ content: 'о чём эта инструкция и кому она пригодится.' }),
     createDivider(),
     createHeading({ content: 'раздел', level: 2 }),
     createText({ content: 'текст раздела.' }),
@@ -191,7 +184,7 @@ function createDefaultProject(template = 'note') {
   const templateId = templates[template] ? template : 'note';
   return {
     id: createId('project'),
-    title: 'без названия',
+    title: templateId === 'note' ? 'новая заметка' : templateId === 'blank' ? 'новая страница' : TEMPLATE_LABELS[templateId],
     template: templateId,
     settings: { ...DEFAULT_SETTINGS },
     blocks: templateFactories[templateId](),
@@ -212,6 +205,8 @@ const history = {
 };
 
 let saveTimer = null;
+let statusTimer = null;
+const dialogFocus = new WeakMap();
 let dragState = null;
 
 let initialized = false;
@@ -222,11 +217,8 @@ const dom = {
   saveState: null,
   undoButton: null,
   redoButton: null,
-  composition: null,
   list: null,
   editor: null,
-  addType: null,
-  addButton: null,
   settingsMount: null,
   previewMount: null,
   previewStatus: null,
@@ -237,10 +229,6 @@ const dom = {
   zipExportButton: null,
   importButton: null,
 };
-
-function cloneBlocks(templateId) {
-  return templateFactories[templateId]().map((block) => ({ ...block }));
-}
 
 function getBlock(id) {
   return state.blocks.find((block) => block.id === id) || null;
@@ -320,7 +308,7 @@ function redo() {
 }
 
 function markDirty() {
-  if (dom.saveState) dom.saveState.textContent = '· есть изменения';
+  if (dom.saveState) dom.saveState.textContent = 'сохраняем…';
   scheduleSave();
   updateHistoryButtons();
 }
@@ -334,10 +322,17 @@ function saveToStorage() {
   if (typeof localStorage === 'undefined') return false;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(projectSnapshot()));
-    if (dom.saveState) dom.saveState.textContent = '· сохранено локально';
+    if (dom.saveState) {
+      dom.saveState.textContent = 'сохранено в браузере';
+      delete dom.saveState.dataset.status;
+    }
     return true;
   } catch {
-    if (dom.saveState) dom.saveState.textContent = '· только в памяти';
+    if (dom.saveState) {
+      dom.saveState.textContent = 'не сохранено · скачайте json';
+      dom.saveState.dataset.status = 'error';
+    }
+    setProjectStatus('браузер не сохранил изменения. выберите «проект → сохранить проект», чтобы не потерять работу.', true);
     return false;
   }
 }
@@ -347,7 +342,7 @@ function loadFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return normalizeImportedProject(JSON.parse(raw));
+    return normalizeImportedProject(JSON.parse(raw), { allowDraftUrls: true });
   } catch {
     try { localStorage.removeItem(STORAGE_KEY); } catch { /* storage may be unavailable */ }
     return null;
@@ -355,8 +350,9 @@ function loadFromStorage() {
 }
 
 function rememberFocus() {
+  if (typeof document === 'undefined') return null;
   const active = document.activeElement;
-  if (!active || !dom.editor || !dom.editor.contains(active)) return null;
+  if (!active || (!dom.editor?.contains(active) && !dom.list?.contains(active))) return null;
   const focusKey = active.dataset.focusKey;
   if (!focusKey) return null;
   return {
@@ -368,7 +364,7 @@ function rememberFocus() {
 
 function restoreFocus(snapshot) {
   if (!snapshot || !dom.editor) return;
-  const controls = dom.editor.querySelectorAll('[data-focus-key]');
+  const controls = [...dom.editor.querySelectorAll('[data-focus-key]'), ...(dom.list?.querySelectorAll('[data-focus-key]') || [])];
   const target = Array.from(controls).find((control) => control.dataset.focusKey === snapshot.focusKey);
   if (!target) return;
   target.focus({ preventScroll: true });
@@ -417,54 +413,69 @@ function textHtml(value, emptyLabel) {
 }
 
 function renderPreview(project = state, { mount = true } = {}) {
+  const editing = mount && !dom.shell?.classList.contains('full-preview');
   const blocks = Array.isArray(project?.blocks) ? project.blocks : [];
   const content = blocks.map((block) => {
     if (!block || !block.type) return '';
+    const selection = editing ? ` data-preview-block-id="${escapeHtml(block.id || '')}"` : '';
     if (block.type === 'heading') {
-      const parsedLevel = Number.parseInt(block.level, 10);
-      const level = Number.isFinite(parsedLevel) ? Math.min(6, Math.max(1, parsedLevel)) : 1;
-      return `<h${level} class="preview-block preview-heading">${textHtml(block.content, 'добавьте заголовок')}</h${level}>`;
+      if (!editing && !String(block.content || '').trim()) return '';
+      const level = Math.min(3, Math.max(1, Number(block.level) || 1));
+      return `<h${level} class="preview-block preview-heading"${selection}>${textHtml(block.content, 'добавьте заголовок')}</h${level}>`;
     }
     if (block.type === 'text') {
-      return `<p class="preview-block preview-text">${textHtml(block.content, 'добавьте текст')}</p>`;
+      if (!editing && !String(block.content || '').trim()) return '';
+      return `<p class="preview-block preview-text"${selection}>${textHtml(block.content, 'добавьте текст')}</p>`;
     }
     if (block.type === 'image') {
       const src = safeHref(block.src);
-      const alt = String(block.alt ?? '').trim();
+      if (!editing && !src) return '';
       const caption = String(block.caption ?? '').trim();
       const media = src
-        ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy" data-image-block-id="${escapeHtml(block.id || '')}">`
-        : `<div class="preview-image-placeholder" role="img" aria-label="изображение не добавлено"><span class="placeholder-cross" aria-hidden="true">✳</span><span class="empty-hint">добавьте изображение</span></div>`;
-      return `<figure class="preview-block preview-image">${media}${caption ? `<figcaption class="page-caption">${textHtml(caption, '')}</figcaption>` : ''}</figure>`;
+        ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(block.alt || '')}" loading="lazy"${mount ? ` data-image-block-id="${escapeHtml(block.id || '')}"` : ''}>`
+        : '<div class="preview-image-placeholder" role="img" aria-label="изображение не добавлено"><span class="placeholder-cross" aria-hidden="true">+</span><span>добавьте изображение</span></div>';
+      return `<figure class="preview-block preview-image"${selection}>${media}${caption ? `<figcaption class="page-caption">${textHtml(caption, '')}</figcaption>` : ''}</figure>`;
     }
     if (block.type === 'link') {
       const href = safeLinkHref(block.url);
+      if (!editing && (!href || !String(block.label || '').trim())) return '';
       const label = textHtml(block.label, 'добавьте текст ссылки');
       return href
-        ? `<p class="preview-block preview-link"><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${label}</a></p>`
-        : `<p class="preview-block preview-link is-disabled"><span aria-disabled="true">${label}</span><small class="empty-hint">укажите безопасный адрес</small></p>`;
+        ? `<p class="preview-block preview-link"${selection}><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${label}</a></p>`
+        : `<p class="preview-block preview-link is-disabled"${selection}><span aria-disabled="true">${label}</span><small class="empty-hint">укажите адрес https://, путь или якорь</small></p>`;
     }
     if (block.type === 'divider') {
       return block.style === 'space'
-        ? '<div class="preview-block preview-space" aria-hidden="true"></div>'
-        : '<hr class="preview-block preview-rule">';
+        ? `<div class="preview-block preview-space"${selection} aria-hidden="true"></div>`
+        : `<hr class="preview-block preview-rule"${selection}>`;
     }
     return '';
   }).join('');
-  const html = `<article class="page-preview" tabindex="-1" data-template="${escapeHtml(project?.template || 'note')}">
-    ${content || '<p class="preview-empty">добавьте блок в редакторе, чтобы увидеть его здесь.</p>'}
-  </article>`;
-  if (mount && dom.previewMount) dom.previewMount.innerHTML = html;
-  if (mount && dom.previewStatus) dom.previewStatus.textContent = `предпросмотр обновлён: ${blocks.length} ${blocks.length === 1 ? 'блок' : 'блоков'}.`;
+  const empty = editing ? '<div class="preview-empty"><h2>здесь будет ваша страница</h2><p>добавьте заголовок, текст или изображение в панели слева.</p><button class="button button-quiet" type="button" data-action="add-first-block">добавить текст</button></div>' : '';
+  const html = `<article class="page-preview"${mount ? ' tabindex="-1"' : ''} data-template="${escapeHtml(project?.template || 'note')}">${content || empty}</article>`;
+  if (mount && dom.previewMount) {
+    dom.previewMount.innerHTML = html;
+    updatePreviewSelection();
+  }
+  if (mount && dom.previewStatus) dom.previewStatus.textContent = 'предпросмотр обновлён.';
   return html;
 }
 
+function updatePreviewSelection() {
+  dom.previewMount?.querySelectorAll('[data-preview-block-id]').forEach((block) => {
+    block.classList.toggle('is-editing', block.dataset.previewBlockId === state.selectedBlockId);
+  });
+}
+
 function setProjectStatus(message, isError = false) {
-  const target = dom.status || dom.previewStatus;
+  const target = dom.status;
   if (!target) return;
+  if (statusTimer) clearTimeout(statusTimer);
   target.textContent = message;
+  target.hidden = !message;
   target.dataset.status = isError ? 'error' : 'success';
   target.setAttribute('role', isError ? 'alert' : 'status');
+  if (message && !isError) statusTimer = setTimeout(() => { target.hidden = true; }, 4500);
 }
 
 function projectPayload() {
@@ -666,7 +677,7 @@ function exportStyles(settings = {}) {
     .replace('--ink: #28251F;', `--ink: ${color(settings.ink, DEFAULT_SETTINGS.ink)};`)
     .replace('--accent: #C95B43;', `--accent: ${color(settings.accent, DEFAULT_SETTINGS.accent)};`)
     .replace('--page-width: 960px;', `--page-width: ${width}px;`)
-    .replace('--heading-font: "PT Serif", "Iowan Old Style", "Palatino Linotype", serif;', `--heading-font: ${headingFont};`)
+    .replace('--heading-font: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;', `--heading-font: ${headingFont};`)
     .replace('--body-font: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;', `--body-font: ${bodyFont};`);
 }
 
@@ -687,14 +698,14 @@ function buildExportFiles(project = state) {
     return copy;
   });
   const exportProject = { ...source, blocks };
-  const title = escapeHtml(String(source.title || 'Static Studio'));
+  const title = escapeHtml(String(source.title || 'static studio'));
   const html = `<!doctype html>
 <html lang="ru">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#F3EBDD">
-    <meta name="description" content="локальная статичная страница, собранная в Static Studio.">
+    <meta name="theme-color" content="${/^#[0-9a-f]{6}$/i.test(source.settings?.paper || '') ? source.settings.paper : DEFAULT_SETTINGS.paper}">
+    <meta name="description" content="локальная статичная страница, собранная в static studio.">
     <title>${title}</title>
     <link rel="stylesheet" href="styles.css">
   </head>
@@ -722,16 +733,16 @@ function exportZip(project = state) {
     setTimeout(() => URL.revokeObjectURL(url), 0);
     const hasExternalImages = (project.blocks || []).some((block) => block?.type === 'image' && block.src && !/^data:image\//i.test(block.src));
     setProjectStatus(hasExternalImages
-      ? 'ZIP экспортирован. внешние изображения останутся зависимыми от сети.'
-      : 'страница экспортирована в static-studio-export.zip.');
+      ? 'сайт скачан. картинки по внешним ссылкам требуют интернета.'
+      : 'сайт скачан. распакуйте zip и откройте index.html.');
     return blob;
   } catch (error) {
-    setProjectStatus(`не удалось экспортировать ZIP: ${error.message}`, true);
+    setProjectStatus(`не удалось скачать сайт: ${error.message}`, true);
     return false;
   }
 }
 
-function normalizeImportedProject(input) {
+function normalizeImportedProject(input, { allowDraftUrls = false } = {}) {
   if (input?.version !== undefined && input.version !== 1 && input.version !== PROJECT_VERSION) throw new Error(`неподдерживаемая версия проекта: ${input.version}.`);
   if (!input || typeof input !== 'object' || !Array.isArray(input.blocks) || input.blocks.length > MAX_BLOCKS) throw new Error(`файл проекта должен содержать не более ${MAX_BLOCKS} блоков.`);
   if (input.template !== undefined && (typeof input.template !== 'string' || !Object.hasOwn(templates, input.template))) throw new Error('файл содержит неизвестный шаблон.');
@@ -762,15 +773,15 @@ function normalizeImportedProject(input) {
       }
     }
     if (safe.type === 'heading') safe.level = Math.min(3, Math.max(1, Number(safe.level) || 1));
-    if (safe.type === 'image' && safe.src) {
+    if (safe.type === 'image' && safe.src && !allowDraftUrls) {
       if (!safeHref(safe.src)) throw new Error('файл содержит небезопасный или неподдерживаемый адрес изображения.');
       if (/^data:/i.test(safe.src) && !parseImageDataUrl(safe.src)) throw new Error('файл содержит неподдерживаемый формат изображения.');
     }
-    if (safe.type === 'link' && safe.url && !safeLinkHref(safe.url)) throw new Error('файл содержит небезопасный адрес ссылки.');
+    if (safe.type === 'link' && safe.url && !allowDraftUrls && !safeLinkHref(safe.url)) throw new Error('файл содержит небезопасный адрес ссылки.');
     return safe;
   });
   const selectedBlockId = typeof input.selectedBlockId === 'string' && usedIds.has(input.selectedBlockId) ? input.selectedBlockId : blocks[0]?.id || null;
-  return { id: typeof input.id === 'string' && input.id.length <= 120 ? input.id : createId('project'), title: typeof input.title === 'string' ? input.title.slice(0, MAX_TITLE_LENGTH) : 'без названия', template, settings, blocks, selectedBlockId };
+  return { id: typeof input.id === 'string' && input.id.length <= 120 ? input.id : createId('project'), title: typeof input.title === 'string' ? input.title.slice(0, MAX_TITLE_LENGTH) : 'новая страница', template, settings, blocks, selectedBlockId };
 }
 
 function importProjectData(input) {
@@ -786,7 +797,8 @@ function importProjectData(input) {
 function applySettings() {
   if (typeof document === 'undefined') return;
   const settings = state.settings || DEFAULT_SETTINGS;
-  const root = document.documentElement;
+  const root = dom.previewMount;
+  if (!root) return;
   const width = Math.min(1440, Math.max(480, Number(settings.width) || DEFAULT_SETTINGS.width));
   const color = (value, fallback) => /^#[0-9a-f]{6}$/i.test(String(value ?? '')) ? String(value).toUpperCase() : fallback;
   root.style.setProperty('--page-width', `${width}px`);
@@ -797,45 +809,51 @@ function applySettings() {
   root.style.setProperty('--body-font', FONT_STACKS[settings.bodyFont] || FONT_STACKS.mono);
 }
 
+const PALETTES = Object.freeze({
+  paper: { label: 'бумага', paper: '#FFFDF7', ink: '#292E2B', accent: '#315D4A' },
+  light: { label: 'светлая', paper: '#FFFFFF', ink: '#252A32', accent: '#3659A1' },
+  dark: { label: 'тёмная', paper: '#252A28', ink: '#F2F0E7', accent: '#B5D3A4' },
+});
+
+function applyPalette(name) {
+  const palette = PALETTES[name];
+  if (!palette) return false;
+  rememberMutation('смена палитры', { force: true });
+  Object.assign(state.settings, { paper: palette.paper, ink: palette.ink, accent: palette.accent });
+  applySettings();
+  syncSettingControls({ preserveActive: false });
+  renderPreview(state);
+  markDirty();
+  return true;
+}
+
 function renderSettings() {
   if (!dom.settingsMount) return;
   const settings = state.settings || DEFAULT_SETTINGS;
   const widthOptions = WIDTH_PRESETS.map((width) => `<option value="${width}"${Number(settings.width) === width ? ' selected' : ''}>${width} px</option>`).join('');
+  const fonts = [['serif', 'с засечками'], ['grotesk', 'гротеск'], ['system', 'системный'], ['mono', 'моноширинный']];
+  const fontOptions = (value) => fonts.map(([key, label]) => `<option value="${key}"${value === key ? ' selected' : ''}>${label}</option>`).join('');
   dom.settingsMount.innerHTML = `
-    <label class="field-label" for="page-width-preset">ширина страницы</label>
-    <select class="select-control" id="page-width-preset" data-setting="widthPreset" aria-label="предустановленная ширина страницы"><option value="">своя ширина</option>${widthOptions}</select>
-    <label class="field-label" for="page-width">точная ширина, px</label>
-    <input class="text-control compact-control" id="page-width" data-setting="width" type="number" min="480" max="1440" step="1" value="${escapeHtml(settings.width)}">
-    <label class="field-label" for="page-paper">цвет бумаги</label>
-    <div class="color-field"><input id="page-paper" data-setting="paper" type="color" value="${escapeHtml(settings.paper)}"><span data-color-value="paper">${escapeHtml(settings.paper)}</span></div>
-    <label class="field-label" for="page-ink">цвет текста</label>
-    <div class="color-field"><input id="page-ink" data-setting="ink" type="color" value="${escapeHtml(settings.ink)}"><span data-color-value="ink">${escapeHtml(settings.ink)}</span></div>
-    <label class="field-label" for="page-accent">акцентный цвет</label>
-    <div class="color-field"><input id="page-accent" data-setting="accent" type="color" value="${escapeHtml(settings.accent)}"><span data-color-value="accent">${escapeHtml(settings.accent)}</span></div>
-    <label class="field-label" for="page-heading-font">шрифт заголовков</label>
-    <select class="select-control" id="page-heading-font" data-setting="headingFont">
-      <option value="serif"${settings.headingFont === 'serif' ? ' selected' : ''}>с засечками</option><option value="grotesk"${settings.headingFont === 'grotesk' ? ' selected' : ''}>гротеск</option><option value="system"${settings.headingFont === 'system' ? ' selected' : ''}>системный</option>
-    </select>
-    <label class="field-label" for="page-body-font">шрифт текста</label>
-    <select class="select-control" id="page-body-font" data-setting="bodyFont">
-      <option value="mono"${settings.bodyFont === 'mono' ? ' selected' : ''}>моноширинный</option><option value="grotesk"${settings.bodyFont === 'grotesk' ? ' selected' : ''}>гротеск</option><option value="system"${settings.bodyFont === 'system' ? ' selected' : ''}>системный</option>
-    </select>`;
+    <div class="setting-group"><h3>палитра</h3><div class="palette-options">${Object.entries(PALETTES).map(([key, palette]) => `<button class="palette-button" type="button" data-action="palette" data-palette="${key}" aria-pressed="${['paper', 'ink', 'accent'].every((field) => settings[field] === palette[field])}"><span class="palette-sample" style="background:${palette.paper};color:${palette.ink}">а<span style="background:${palette.accent}"></span></span>${palette.label}</button>`).join('')}</div></div>
+    <div class="setting-group"><h3>цвета</h3>${[['paper', 'фон'], ['ink', 'текст'], ['accent', 'ссылки']].map(([key, label]) => `<label class="color-field" for="page-${key}"><span>${label}</span><span class="color-value" data-color-value="${key}">${settings[key].toLowerCase()}</span><input id="page-${key}" data-setting="${key}" type="color" value="${settings[key]}"></label>`).join('')}</div>
+    <div class="setting-group"><h3>шрифты</h3><label class="field-label" for="page-heading-font">заголовки</label><select class="select-control" id="page-heading-font" data-setting="headingFont">${fontOptions(settings.headingFont)}</select><label class="field-label" for="page-body-font">основной текст</label><select class="select-control" id="page-body-font" data-setting="bodyFont">${fontOptions(settings.bodyFont)}</select></div>
+    <div class="setting-group"><h3>ширина</h3><label class="visually-hidden" for="page-width-preset">ширина страницы</label><select class="select-control" id="page-width-preset" data-setting="widthPreset"><option value="">своя ширина</option>${widthOptions}</select><label class="field-label" for="page-width">своя ширина, px</label><input class="text-control" id="page-width" data-setting="width" type="number" min="480" max="1440" step="1" value="${settings.width}"></div>`;
   applySettings();
 }
 
 function syncSettingControls({ preserveActive = true } = {}) {
   if (!dom.settingsMount) return;
-  const settings = state.settings || DEFAULT_SETTINGS;
+  const settings = state.settings;
   dom.settingsMount.querySelectorAll('[data-color-value]').forEach((label) => {
-    const value = settings[label.dataset.colorValue] || '';
-    label.textContent = value;
+    label.textContent = (settings[label.dataset.colorValue] || '').toLowerCase();
   });
-  const width = dom.settingsMount.querySelector('[data-setting="width"]');
-  if (width && (!preserveActive || document.activeElement !== width)) width.value = settings.width;
-  const preset = dom.settingsMount.querySelector('[data-setting="widthPreset"]');
-  if (preset && !WIDTH_PRESETS.includes(Number(settings.width))) preset.value = '';
-  dom.settingsMount.querySelectorAll('[data-setting="headingFont"], [data-setting="bodyFont"]').forEach((control) => {
-    if (document.activeElement !== control) control.value = settings[control.dataset.setting];
+  dom.settingsMount.querySelectorAll('[data-setting]').forEach((control) => {
+    if (preserveActive && document.activeElement === control) return;
+    control.value = control.dataset.setting === 'widthPreset' ? (WIDTH_PRESETS.includes(settings.width) ? settings.width : '') : settings[control.dataset.setting];
+  });
+  dom.settingsMount.querySelectorAll('[data-palette]').forEach((button) => {
+    const palette = PALETTES[button.dataset.palette];
+    button.setAttribute('aria-pressed', String(['paper', 'ink', 'accent'].every((field) => settings[field] === palette[field])));
   });
 }
 
@@ -859,46 +877,63 @@ function selectField({ block, field, label, value, options }) {
   return fieldLabel(label, select);
 }
 
+const ICON_PATHS = Object.freeze({
+  heading: '<path d="M5 5v14M19 5v14M5 12h14"/>',
+  text: '<path d="M4 5h16M4 10h16M4 15h16M4 20h10"/>',
+  image: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-6 5 7"/>',
+  link: '<path d="m10 14 4-4M8 16l-1 1a4 4 0 0 1-6-6l5-5a4 4 0 0 1 6 0m0 12a4 4 0 0 0 6 0l5-5a4 4 0 0 0-6-6l-1 1" transform="translate(0 -1) scale(.95)"/>',
+  divider: '<path d="M4 12h16"/>',
+  'move-up': '<path d="m6 10 6-6 6 6M12 4v16"/>',
+  'move-down': '<path d="m6 14 6 6 6-6M12 4v16"/>',
+  duplicate: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/>',
+  delete: '<path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/>',
+});
+
+function icon(name) {
+  return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${ICON_PATHS[name] || ICON_PATHS.text}</svg>`;
+}
+
 function renderComposition() {
-  if (!dom.composition) return;
-  dom.composition.innerHTML = Object.entries(TEMPLATE_LABELS)
-    .map(([value, label]) => `<option value="${value}"${state.template === value ? ' selected' : ''}>${label}</option>`)
-    .join('');
-  dom.composition.value = state.template;
+  const label = typeof document !== 'undefined' ? document.querySelector('#template-name') : null;
+  if (label) label.textContent = TEMPLATE_LABELS[state.template];
 }
 
 function actionButton(action, label, disabled = false) {
-  return `<button class="icon-button block-action" type="button" data-action="${action}" aria-label="${escapeHtml(label)}"${disabled ? ' disabled' : ''}>${action === 'move-up' ? '↑' : action === 'move-down' ? '↓' : action === 'duplicate' ? '＋' : '×'}</button>`;
+  return `<button class="icon-button block-action${action === 'delete' ? ' delete-action' : ''}" type="button" data-action="${action}" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}"${disabled ? ' disabled' : ''}>${icon(action)}</button>`;
+}
+
+function blockSummary(block) {
+  if (block.type === 'heading' || block.type === 'text') return String(block.content || '').split('\n')[0] || (block.type === 'heading' ? 'пустой заголовок' : 'пустой текст');
+  if (block.type === 'link') return block.label || 'новая ссылка';
+  if (block.type === 'image') return block.caption || block.name || 'новое изображение';
+  return block.style === 'space' ? 'отступ' : 'тонкая линия';
 }
 
 function renderBlockList() {
   if (!dom.list) return;
-  dom.list.innerHTML = state.blocks.map((block, index) => {
+  dom.list.innerHTML = state.blocks.map((block) => {
     const selected = block.id === state.selectedBlockId;
-    const typeLabel = BLOCK_LABELS[block.type] || block.type;
-    const title = block.type === 'heading' || block.type === 'text' ? String(block.content ?? '').split('\n')[0] : typeLabel;
-    return `<li class="block-item${selected ? ' is-selected' : ''}" data-block-id="${escapeHtml(block.id)}" draggable="true" role="option" aria-selected="${selected}">
-      <button class="block-select" type="button" data-action="select" data-block-id="${escapeHtml(block.id)}" data-focus-key="row:${escapeHtml(block.id)}" aria-selected="${selected}" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown">
-        <span class="block-grip" aria-hidden="true">⠿</span><span class="block-number">${String(index + 1).padStart(2, '0')}</span><span class="block-name">${escapeHtml(typeLabel)}</span><span class="block-summary">${escapeHtml(title)}</span>
-      </button>
-      <div class="block-actions" aria-label="действия блока">
-        ${actionButton('move-up', `переместить «${typeLabel}» выше`, index === 0)}
-        ${actionButton('move-down', `переместить «${typeLabel}» ниже`, index === state.blocks.length - 1)}
-        ${actionButton('duplicate', `дублировать «${typeLabel}»`)}
-        ${actionButton('delete', `удалить «${typeLabel}»`)}
-      </div>
-    </li>`;
-  }).join('');
+    const typeLabel = BLOCK_LABELS[block.type];
+    return `<li class="block-item${selected ? ' is-selected' : ''}" data-block-id="${escapeHtml(block.id)}" draggable="true">
+      <button class="block-select" type="button" data-action="select" data-block-id="${escapeHtml(block.id)}" data-focus-key="row:${escapeHtml(block.id)}" aria-pressed="${selected}" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown">
+        <span class="block-type-icon">${icon(block.type)}</span><span class="block-row-copy"><span class="block-summary">${escapeHtml(blockSummary(block))}</span><span class="block-name">${typeLabel}</span></span><span class="block-grip" aria-hidden="true">⠿</span>
+      </button></li>`;
+  }).join('') || '<li class="blocks-empty">добавьте первый блок</li>';
+  const count = document.querySelector('#block-count');
+  if (count) count.textContent = state.blocks.length;
 }
 
 function renderBlockEditor() {
   if (!dom.editor) return;
   const block = getSelectedBlock();
   if (!block) {
-    dom.editor.innerHTML = '<p class="field-label">добавьте блок, чтобы начать редактирование.</p>';
+    dom.editor.innerHTML = '';
+    dom.editor.closest('.editor-section')?.setAttribute('hidden', '');
     return;
   }
-  let html = `<div class="editor-block-heading"><span class="field-label">выбранный блок</span><strong>${escapeHtml(BLOCK_LABELS[block.type] || block.type)}</strong></div>`;
+  dom.editor.closest('.editor-section')?.removeAttribute('hidden');
+  const index = state.blocks.indexOf(block);
+  let html = `<div class="editor-block-heading" data-block-id="${escapeHtml(block.id)}"><h2>${BLOCK_LABELS[block.type]}</h2><div class="block-actions">${actionButton('move-up', 'переместить выше', index === 0)}${actionButton('move-down', 'переместить ниже', index === state.blocks.length - 1)}${actionButton('duplicate', 'сделать копию')}${actionButton('delete', 'удалить блок')}</div></div>`;
   if (block.type === 'heading') {
     html += textareaField({ block, field: 'content', label: 'текст заголовка', value: block.content, placeholder: 'введите заголовок' });
     html += selectField({ block, field: 'level', label: 'уровень', value: String(block.level || 1), options: [['1', 'крупный'], ['2', 'средний'], ['3', 'малый']] });
@@ -907,15 +942,18 @@ function renderBlockEditor() {
   } else if (block.type === 'image') {
     html += `<button class="button button-quiet image-upload-button" type="button" data-action="upload-image" data-block-id="${escapeHtml(block.id)}">загрузить изображение</button>`;
     if (block.src) html += `<button class="button button-quiet image-clear-button" type="button" data-action="clear-image" data-block-id="${escapeHtml(block.id)}">убрать изображение</button>`;
-    html += inputField({ block, field: 'src', label: 'адрес изображения', value: block.src, type: 'url', placeholder: 'https://…' });
-    html += inputField({ block, field: 'name', label: 'имя файла', value: block.name || '', placeholder: 'необязательно' });
+    if (/^data:image\//i.test(block.src)) {
+      html += `<p class="file-name">${escapeHtml(block.name || 'изображение с устройства')}</p>`;
+    } else {
+      html += inputField({ block, field: 'src', label: 'или ссылка на изображение', value: block.src, type: 'text', placeholder: 'https://example.com/image.jpg' });
+    }
     html += inputField({ block, field: 'alt', label: 'описание', value: block.alt, placeholder: 'что изображено' });
     html += inputField({ block, field: 'caption', label: 'подпись', value: block.caption, placeholder: 'необязательно' });
   } else if (block.type === 'link') {
     html += inputField({ block, field: 'label', label: 'текст ссылки', value: block.label, placeholder: 'название ссылки' });
-    html += inputField({ block, field: 'url', label: 'адрес', value: block.url, type: 'url', placeholder: 'https://…' });
+    html += inputField({ block, field: 'url', label: 'адрес', value: block.url, type: 'text', placeholder: 'https://example.com' });
   } else if (block.type === 'divider') {
-    html += selectField({ block, field: 'style', label: 'вид линии', value: block.style || 'line', options: [['line', 'тонкая линия'], ['space', 'воздух']] });
+    html += selectField({ block, field: 'style', label: 'разделитель', value: block.style || 'line', options: [['line', 'тонкая линия'], ['space', 'отступ']] });
   }
   dom.editor.innerHTML = html;
 }
@@ -947,16 +985,16 @@ function moveBlock(id, direction) {
   return true;
 }
 
-function replaceTemplate(templateId) {
-  if (!templates[templateId]) return;
-  if (templateId === state.template) return;
-  commitMutation('смена композиции', () => {
-    state.template = templateId;
-    state.blocks = cloneBlocks(templateId);
-    state.selectedBlockId = state.blocks[0]?.id || null;
-  }, { force: true });
+function newProject(templateId = 'note') {
+  if (!Object.hasOwn(templates, templateId)) return false;
+  rememberMutation('создание страницы', { force: true });
+  const next = createDefaultProject(templateId);
+  Object.assign(state, next, { selectedBlockId: next.blocks[0]?.id || null });
   renderAll();
-  setProjectStatus(`композиция «${TEMPLATE_LABELS[templateId]}» применена. можно отменить.`);
+  setPreviewMode(false);
+  setEditorTab('content');
+  markDirty();
+  return true;
 }
 
 function addBlock(type) {
@@ -966,7 +1004,8 @@ function addBlock(type) {
   }
   const factory = blockFactories[type] || createText;
   const block = factory();
-  commitMutation('добавление блока', () => state.blocks.push(block), { force: true });
+  const selectedIndex = state.blocks.findIndex((item) => item.id === state.selectedBlockId);
+  commitMutation('добавление блока', () => state.blocks.splice(selectedIndex < 0 ? state.blocks.length : selectedIndex + 1, 0, block), { force: true });
   state.selectedBlockId = block.id;
   renderAll({ focus: { focusKey: `${block.id}:${Object.keys(block).find((key) => key !== 'id' && key !== 'type') || 'content'}`, start: null, end: null } });
 }
@@ -1011,9 +1050,7 @@ function updateBlockSummary(blockId) {
   const row = dom.list ? Array.from(dom.list.querySelectorAll('[data-block-id]')).find((item) => item.dataset.blockId === blockId) : null;
   const block = getBlock(blockId);
   const summary = row?.querySelector('.block-summary');
-  if (summary && block) summary.textContent = block.type === 'heading' || block.type === 'text'
-    ? String(block.content || '').split('\n')[0]
-    : BLOCK_LABELS[block.type] || block.type;
+  if (summary && block) summary.textContent = blockSummary(block);
 }
 
 function handleClick(event) {
@@ -1046,7 +1083,7 @@ function handleTitleInput(event) {
   const nextTitle = String(event.target.value || '').slice(0, MAX_TITLE_LENGTH);
   if (nextTitle === state.title) return;
   rememberMutation('изменение названия', { fieldKey: 'project:title' });
-  state.title = nextTitle || 'без названия';
+  state.title = nextTitle;
   markDirty();
 }
 
@@ -1093,6 +1130,7 @@ function handleSettingChange(event) {
 }
 
 function setPreviewViewport(mode) {
+  if (typeof document === 'undefined') return;
   const isMobile = mode === 'mobile';
   const frame = document.querySelector('#preview-mount');
   frame?.classList.toggle('is-mobile', isMobile);
@@ -1106,37 +1144,121 @@ function setPreviewViewport(mode) {
 function setPreviewMode(showPreview) {
   if (!dom.shell) return;
   dom.shell.classList.toggle('full-preview', showPreview);
+  renderPreview(state);
   const toggle = document.querySelector('#mobile-preview-toggle');
   if (toggle) {
-    toggle.textContent = showPreview ? 'редактор' : 'предпросмотр';
+    toggle.textContent = showPreview ? 'редактор' : 'посмотреть';
     toggle.setAttribute('aria-pressed', String(showPreview));
   }
   if (showPreview) dom.previewMount?.querySelector('.page-preview')?.focus?.({ preventScroll: true });
+  else toggle?.focus?.({ preventScroll: true });
+}
+
+function selectBlock(id, { focusField = false } = {}) {
+  if (!getBlock(id)) return;
+  state.selectedBlockId = id;
+  setEditorTab('content');
+  renderBlockList();
+  renderBlockEditor();
+  updatePreviewSelection();
+  if (focusField) dom.editor?.querySelector('.editor-field, .image-upload-button')?.focus();
+}
+
+function setEditorTab(name) {
+  if (typeof document === 'undefined') return;
+  document.querySelectorAll('[data-editor-tab]').forEach((tab) => {
+    const active = tab.dataset.editorTab === name;
+    tab.classList.toggle('is-active', active);
+    tab.setAttribute('aria-selected', String(active));
+    tab.tabIndex = active ? 0 : -1;
+    const panel = document.getElementById(tab.getAttribute('aria-controls'));
+    if (panel) panel.hidden = !active;
+  });
+}
+
+const TEMPLATE_DESCRIPTIONS = Object.freeze({
+  note: 'для мыслей, текстов и записей',
+  blank: 'начните с чистого листа',
+  guide: 'шаги, материалы и полезные ссылки',
+  portfolio: 'работы и немного о себе',
+  poster: 'дата, место и подробности события',
+});
+
+function renderTemplateChoices() {
+  const mount = document.querySelector('#template-grid');
+  if (!mount) return;
+  mount.innerHTML = ['note', 'blank', 'guide', 'portfolio', 'poster'].map((key) => `<button class="template-card template-${key}" type="button" data-action="choose-template" data-template="${key}"><span class="template-miniature" aria-hidden="true"><span class="mini-heading"></span><span class="mini-line"></span><span class="mini-line short"></span>${key === 'portfolio' || key === 'poster' ? '<span class="mini-image"></span>' : ''}</span><span class="template-name">${TEMPLATE_LABELS[key]}</span><span class="template-description">${TEMPLATE_DESCRIPTIONS[key]}</span></button>`).join('');
+}
+
+function openStarter() {
+  document.querySelector('#new-page-warning').hidden = state.blocks.length === 0;
+  showDialog('starter-dialog');
+}
+
+function showDialog(id) {
+  const dialog = document.getElementById(id);
+  if (!dialog) return;
+  const active = document.activeElement;
+  const returnTo = active?.closest('#project-menu')?.querySelector('summary') || active;
+  dialogFocus.set(dialog, returnTo);
+  dialog.showModal();
 }
 
 function handleGlobalClick(event) {
-  const action = event.target.closest('[data-action]')?.dataset.action;
+  const target = event.target.closest('[data-action]');
+  const action = target?.dataset.action;
+  if (action) document.querySelector('#project-menu')?.removeAttribute('open');
   if (action === 'toggle-preview') {
     setPreviewMode(!dom.shell?.classList.contains('full-preview'));
   } else if (action === 'return-editor') {
     setPreviewMode(false);
+  } else if (action === 'open-starter') {
+    openStarter();
+  } else if (action === 'open-help') {
+    showDialog('help-dialog');
+  } else if (action === 'choose-template') {
+    newProject(target.dataset.template);
+    dialogFocus.set(document.querySelector('#starter-dialog'), dom.title);
+    document.querySelector('#starter-dialog')?.close();
+    dom.title?.focus();
+    dom.title?.select();
+  } else if (action === 'add-first-block') {
+    setPreviewMode(false);
+    setEditorTab('content');
+    addBlock('text');
+  } else if (action === 'add-block') {
+    document.querySelector('#add-menu')?.removeAttribute('open');
+    addBlock(target.dataset.blockType);
+  } else if (action === 'palette') {
+    applyPalette(target.dataset.palette);
+  } else if (['move-up', 'move-down', 'duplicate', 'delete'].includes(action) && dom.editor?.contains(target)) {
+    const id = target.closest('[data-block-id]')?.dataset.blockId;
+    if (action === 'move-up' || action === 'move-down') moveBlock(id, action === 'move-up' ? 'up' : 'down');
+    else if (action === 'duplicate') duplicateBlock(id);
+    else deleteBlock(id);
   } else if (action === 'upload-image') {
-    const block = getBlock(event.target.closest('[data-block-id]')?.dataset.blockId);
+    const block = getSelectedBlock();
     if (block?.type === 'image') {
       if (dom.imageFile) dom.imageFile.dataset.blockId = block.id;
       dom.imageFile?.click();
     }
   } else if (action === 'clear-image') {
-    const block = getBlock(event.target.closest('[data-block-id]')?.dataset.blockId);
+    const block = getSelectedBlock();
     if (block?.type === 'image') {
       rememberMutation('удаление изображения', { force: true });
       block.src = '';
       block.name = '';
-      renderAll({ focus: { focusKey: `${block.id}:src`, start: null, end: null } });
+      renderAll();
       markDirty();
-      setProjectStatus('изображение убрано. можно отменить.');
     }
   }
+  const previewBlock = event.target.closest('[data-preview-block-id]');
+  if (previewBlock && !dom.shell?.classList.contains('full-preview')) {
+    event.preventDefault();
+    selectBlock(previewBlock.dataset.previewBlockId, { focusField: true });
+  }
+  if (!event.target.closest('#project-menu')) document.querySelector('#project-menu')?.removeAttribute('open');
+  if (!event.target.closest('#add-menu')) document.querySelector('#add-menu')?.removeAttribute('open');
 }
 
 function handleImageFile(event) {
@@ -1144,8 +1266,8 @@ function handleImageFile(event) {
   const block = getBlock(event.target.dataset.blockId) || getSelectedBlock();
   event.target.value = '';
   if (!file || !block || block.type !== 'image') return;
-  if (!Object.hasOwn(IMAGE_MIME_EXTENSIONS, file.type)) return setProjectStatus('не удалось загрузить файл: выберите PNG, JPEG, GIF, SVG, WebP или AVIF.', true);
-  if (file.size > MAX_IMAGE_SIZE) return setProjectStatus('изображение слишком большое. Максимальный размер — 10 МБ.', true);
+  if (!Object.hasOwn(IMAGE_MIME_EXTENSIONS, file.type)) return setProjectStatus('не удалось загрузить файл: выберите png, jpeg, gif, svg, webp или avif.', true);
+  if (file.size > MAX_IMAGE_SIZE) return setProjectStatus('изображение слишком большое. максимум 10 мб.', true);
   const reader = new FileReader();
   reader.onerror = () => setProjectStatus('не удалось прочитать изображение.', true);
   reader.onload = () => {
@@ -1182,7 +1304,7 @@ function handleProjectFile(event) {
   event.target.value = '';
   if (!file) return;
   if (file.size > MAX_PROJECT_SIZE) {
-    setProjectStatus('файл проекта слишком большой. Максимальный размер — 15 МБ.', true);
+    setProjectStatus('файл проекта слишком большой. максимум 15 мб.', true);
     return;
   }
   const reader = new FileReader();
@@ -1191,7 +1313,7 @@ function handleProjectFile(event) {
     try {
       importProjectData(JSON.parse(String(reader.result || '')));
     } catch (error) {
-      setProjectStatus(error instanceof SyntaxError ? 'файл проекта содержит некорректный JSON.' : `не удалось импортировать проект: ${error.message}`, true);
+      setProjectStatus(error instanceof SyntaxError ? 'файл проекта содержит некорректный json.' : `не удалось импортировать проект: ${error.message}`, true);
     }
   };
   reader.readAsText(file);
@@ -1206,6 +1328,14 @@ function handleKeydown(event) {
 }
 
 function handleGlobalKeydown(event) {
+  if (event.key === 'Escape') {
+    const openMenu = document.querySelector('#project-menu[open], #add-menu[open]');
+    if (openMenu) {
+      openMenu.removeAttribute('open');
+      openMenu.querySelector('summary')?.focus();
+    }
+    return;
+  }
   if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
   const key = event.key.toLowerCase();
   const editable = event.target.matches?.('input, textarea, select, [contenteditable="true"]');
@@ -1229,7 +1359,7 @@ function handleDragStart(event) {
 }
 
 function clearDragState() {
-  dom.list?.querySelectorAll('.is-dragging, .drop-target').forEach((row) => row.classList.remove('is-dragging', 'drop-target'));
+  dom.list?.querySelectorAll('.is-dragging, .drop-target, .drop-after').forEach((row) => row.classList.remove('is-dragging', 'drop-target', 'drop-after'));
   dragState = null;
 }
 
@@ -1248,10 +1378,12 @@ function handleDrop(event) {
     clearDragState();
     return;
   }
+  const rect = row.getBoundingClientRect();
+  const after = event.clientY >= rect.top + rect.height / 2;
+  const insertIndex = toIndex - (fromIndex < toIndex ? 1 : 0) + (after ? 1 : 0);
+  if (insertIndex === fromIndex) { clearDragState(); return; }
   rememberMutation('перемещение блока', { force: true });
   const [moved] = state.blocks.splice(fromIndex, 1);
-  // Removing an earlier item shifts the later drop target one slot left.
-  const insertIndex = fromIndex < toIndex ? toIndex - 1 : toIndex;
   state.blocks.splice(insertIndex, 0, moved);
   state.selectedBlockId = moved.id;
   markDirty();
@@ -1266,11 +1398,8 @@ function bindDom() {
   dom.saveState = document.querySelector('#save-state');
   dom.undoButton = document.querySelector('#undo-button');
   dom.redoButton = document.querySelector('#redo-button');
-  dom.composition = document.querySelector('#composition-select');
   dom.list = document.querySelector('#block-list');
   dom.editor = document.querySelector('#block-editor');
-  dom.addType = document.querySelector('#add-block-type');
-  dom.addButton = document.querySelector('#add-block');
   dom.settingsMount = document.querySelector('#settings-mount');
   dom.previewMount = document.querySelector('#preview-mount');
   dom.previewStatus = document.querySelector('#preview-status');
@@ -1285,17 +1414,29 @@ function bindDom() {
   dom.redoButton?.addEventListener('click', redo);
   document.querySelectorAll('[data-preview-mode]').forEach((button) => button.addEventListener('click', () => setPreviewViewport(button.dataset.previewMode)));
 
-  if (dom.addButton && !dom.addType) {
-    dom.addType = document.createElement('select');
-    dom.addType.id = 'add-block-type';
-    dom.addType.className = 'select-control add-block-type';
-    dom.addType.setAttribute('aria-label', 'тип нового блока');
-    dom.addType.innerHTML = Object.entries(BLOCK_LABELS).map(([value, label]) => `<option value="${value}">${label}</option>`).join('');
-    dom.addButton.parentElement.insertBefore(dom.addType, dom.addButton);
-  }
-
-  dom.composition?.addEventListener('change', (event) => replaceTemplate(event.target.value));
-  dom.addButton?.addEventListener('click', () => addBlock(dom.addType?.value || 'text'));
+  const addOptions = document.querySelector('#add-options');
+  if (addOptions) addOptions.innerHTML = Object.entries(BLOCK_LABELS).map(([key, label]) => `<button type="button" data-action="add-block" data-block-type="${key}">${icon(key)}${label}</button>`).join('');
+  document.querySelectorAll('[data-editor-tab]').forEach((tab) => {
+    tab.addEventListener('click', () => setEditorTab(tab.dataset.editorTab));
+    tab.addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const next = event.key === 'Home' ? 'content' : event.key === 'End' ? 'design' : tab.dataset.editorTab === 'content' ? 'design' : 'content';
+      setEditorTab(next);
+      document.querySelector(`[data-editor-tab="${next}"]`)?.focus();
+    });
+  });
+  document.querySelectorAll('dialog').forEach((dialog) => {
+    dialog.addEventListener('close', () => {
+      const target = dialogFocus.get(dialog);
+      if (target?.isConnected && target.getClientRects().length) target.focus({ preventScroll: true });
+    });
+    dialog.addEventListener('click', (event) => {
+      if (event.target !== dialog) return;
+      const rect = dialog.getBoundingClientRect();
+      if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close();
+    });
+  });
   dom.list?.addEventListener('click', handleClick);
   dom.list?.addEventListener('keydown', handleKeydown);
   dom.list?.addEventListener('dragstart', handleDragStart);
@@ -1303,8 +1444,10 @@ function bindDom() {
     const row = event.target.closest('[data-block-id]');
     if (!row || !dragState || row.dataset.blockId === dragState.id) return;
     event.preventDefault();
-    dom.list.querySelectorAll('.drop-target').forEach((item) => item.classList.remove('drop-target'));
+    dom.list.querySelectorAll('.drop-target, .drop-after').forEach((item) => item.classList.remove('drop-target', 'drop-after'));
     row.classList.add('drop-target');
+    const rect = row.getBoundingClientRect();
+    row.classList.toggle('drop-after', event.clientY >= rect.top + rect.height / 2);
   });
   dom.list?.addEventListener('drop', handleDrop);
   dom.list?.addEventListener('dragend', handleDragEnd);
@@ -1316,7 +1459,12 @@ function bindDom() {
   dom.projectFile?.addEventListener('change', handleProjectFile);
   dom.exportButton?.addEventListener('click', exportProject);
   dom.zipExportButton?.addEventListener('click', () => exportZip(state));
-  dom.importButton?.addEventListener('click', () => dom.projectFile?.click());
+  dom.importButton?.addEventListener('click', () => {
+    document.querySelector('#project-menu')?.removeAttribute('open');
+    dom.projectFile?.click();
+  });
+  dom.exportButton?.addEventListener('click', () => document.querySelector('#project-menu')?.removeAttribute('open'));
+  window.addEventListener('pagehide', saveToStorage);
   document.addEventListener('click', handleGlobalClick);
   document.addEventListener('keydown', handleGlobalKeydown);
   dom.previewMount?.addEventListener('error', handlePreviewImageError, true);
@@ -1330,7 +1478,12 @@ function init() {
   if (restored) Object.assign(state, restored);
   state.selectedBlockId = state.selectedBlockId || state.blocks[0]?.id || null;
   renderAll();
-  setProjectStatus(restored ? 'проект восстановлен из локального сохранения.' : 'проект готов к редактированию.');
+  renderTemplateChoices();
+  if (restored && dom.saveState) dom.saveState.textContent = 'сохранено в браузере';
+  if (!restored) {
+    document.querySelector('#new-page-warning').hidden = true;
+    document.querySelector('#starter-dialog')?.showModal();
+  }
 }
 
 if (typeof document !== 'undefined') {
@@ -1351,6 +1504,9 @@ if (typeof window !== 'undefined') {
     blockFactories,
     templates,
     createDefaultProject,
+    newProject,
+    addBlock,
+    applyPalette,
     state,
     safeHref,
     safeLinkHref,
