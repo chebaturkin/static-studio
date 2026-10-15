@@ -8,6 +8,8 @@ an editor for personal notes and small pages. add text, images and links, previe
 
 ![static studio with page content on the left and a live preview on the right](docs/en/editor.png)
 
+the screenshots show a sample note in the english interface. you can also make a page with a few useful links, a short guide or an event poster.
+
 <details>
 <summary>choose a starting point</summary>
 
@@ -34,11 +36,11 @@ move blocks with buttons or drag them, duplicate them or delete them. undo resto
 
 ## keeping your work
 
-changes are saved in this browser. choose **project → save project** for a json backup, then **project → open project** to edit it later. the editor shows a warning if browser storage is unavailable or full.
+changes are saved in this browser’s `localStorage`. choose **project → save project** for a json backup, then **project → open project** to edit it later. clearing browser data removes the local copy. the editor shows a warning if browser storage is unavailable or full.
 
 all files are processed on your device. local images up to 10 mb go into the zip’s `assets/` folder. images linked from another website load from that address and need an internet connection.
 
-the zip contains the finished page, styles and uploaded images. editor hints and empty blocks are left out. to publish, upload the unzipped files to a static host such as github pages. downloading does not publish the site.
+use json to continue editing and zip to share the finished page. the zip contains the page, styles and uploaded images. editor hints and empty blocks are left out. to publish, upload the unzipped files to a static host such as github pages. downloading does not publish the site.
 
 ## language
 
@@ -46,7 +48,7 @@ the zip contains the finished page, styles and uploaded images. editor hints and
 
 ## run and check
 
-open `index.html` directly. running the editor needs no build, dependencies or server. here is an [example exported page](examples/en/export/index.html).
+open `index.html` directly. running the editor needs no build, dependencies or server. the [example export](examples/en/export/) includes a page you can open locally.
 
 ```sh
 npm test
@@ -68,7 +70,7 @@ npm run test:browser
 I18N_URL=http://127.0.0.1:4184 python3 tests/i18n_browser.py
 ```
 
-use `STUDIO_URL` for a different server address. the browser checks cover editing, history, dragging, palettes, images, json, zip, recovery, storage failures, language switching and screen sizes.
+open the local editor in [english](http://127.0.0.1:4184/?lang=en) or [russian](http://127.0.0.1:4184/?lang=ru). the language check also needs python’s playwright package and its chromium browser. use `STUDIO_URL` for a different server address. the browser checks cover editing, history, dragging, palettes, images, json, zip, recovery, storage failures, language switching and screen sizes.
 
 shortcuts: `cmd/ctrl + z` undoes an action; `cmd/ctrl + shift + z` redoes it. in the block list, `alt + ↑/↓` changes the order. text fields keep the browser’s normal editing commands. `escape` closes menus and dialogs.
 
@@ -78,4 +80,4 @@ shortcuts: `cmd/ctrl + z` undoes an action; `cmd/ctrl + shift + z` redoes it. in
 
 ## limits
 
-the editor keeps one current page and the last 50 actions in this session. save separate pages as json. it has no cloud sync, shared editing, database or one-click publishing. links support `https://`, relative paths and anchors; unsafe protocols are blocked. old v1 and v2 projects still open.
+the editor keeps one current page of up to 100 blocks and the last 50 actions in this session. save separate pages as json; imported project files can be up to 15 mb. it has no cloud sync, shared editing, database or one-click publishing. links support `https://`, relative paths and anchors; unsafe protocols are blocked. old v1 and v2 projects still open.

@@ -1,2 +1,10 @@
 node_modules/
 _site/
+
+# Local author and agent notes
+AGENTS.md
+AGENT_PROMPT.md
+docs/superpowers/
+.codex/
+.superpowers/
+.worktrees/
